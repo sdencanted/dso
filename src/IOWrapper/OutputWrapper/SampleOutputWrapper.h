@@ -113,6 +113,7 @@ public:
             // can be used to get the raw image / intensity pyramid.
         }
 
+
         virtual void pushDepthImage(MinimalImageB3* image) override
         {
             // can be used to get the raw image with depth overlay.

@@ -229,6 +229,11 @@ public:
 		return getImage_internal(id, 0);
 	}
 
+	ColorImageAndExposure* getColorImage(int id, bool forceLoadDirectly=false)
+	{
+		return getColorImage_internal(id, 0);
+	}
+
 
 	inline float* getPhotometricGamma()
 	{
@@ -279,6 +284,43 @@ private:
 		}
 	}
 
+	MinimalImageB3* getColorImageRaw_internal(int id, int unused)
+	{
+		if(!isZipped)
+		{
+			// CHANGE FOR ZIP FILE
+			return IOWrap::readImageRGB_8U(files[id]);
+		}
+		else
+		{
+#if HAS_ZIPLIB
+			if(databuffer==0) databuffer = new char[widthOrg*heightOrg*6+10000];
+			zip_file_t* fle = zip_fopen(ziparchive, files[id].c_str(), 0);
+			long readbytes = zip_fread(fle, databuffer, (long)widthOrg*heightOrg*6+10000);
+
+			if(readbytes > (long)widthOrg*heightOrg*6)
+			{
+				printf("read %ld/%ld bytes for file %s. increase buffer!!\n", readbytes,(long)widthOrg*heightOrg*6+10000, files[id].c_str());
+				delete[] databuffer;
+				databuffer = new char[(long)widthOrg*heightOrg*30];
+				fle = zip_fopen(ziparchive, files[id].c_str(), 0);
+				readbytes = zip_fread(fle, databuffer, (long)widthOrg*heightOrg*30+10000);
+
+				if(readbytes > (long)widthOrg*heightOrg*30)
+				{
+					printf("buffer still to small (read %ld/%ld). abort.\n", readbytes,(long)widthOrg*heightOrg*30+10000);
+					exit(1);
+				}
+			}
+
+			return IOWrap::readStreamRGB_8U(databuffer, readbytes);
+#else
+			printf("ERROR: cannot read .zip archive, as compile without ziplib!\n");
+			exit(1);
+#endif
+		}
+	}
+
 
 	ImageAndExposure* getImage_internal(int id, int unused)
 	{
@@ -291,6 +333,17 @@ private:
 		return ret2;
 	}
 
+
+	ColorImageAndExposure* getColorImage_internal(int id, int unused)
+	{
+		MinimalImageB3* minimg = getColorImageRaw_internal(id, 0);
+		ColorImageAndExposure* ret2 = undistort->colorundistort<Vec3b>(
+				minimg,
+				(exposures.size() == 0 ? 1.0f : exposures[id]),
+				(timestamps.size() == 0 ? 0.0 : timestamps[id]));
+		delete minimg;
+		return ret2;
+	}
 	inline void loadTimestamps()
 	{
 		std::ifstream tr;

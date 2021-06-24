@@ -35,6 +35,7 @@
 #include "IOWrapper/ImageDisplay.h"
 #include "IOWrapper/ImageRW.h"
 #include "util/Undistort.h"
+#include "util/MinimalImage.h"
 
 
 namespace dso
@@ -56,9 +57,11 @@ PhotometricUndistorter::PhotometricUndistorter(
 	valid=false;
 	vignetteMap=0;
 	vignetteMapInv=0;
+	vignetteColorMapInv=0;
 	w = w_;
 	h = h_;
 	output = new ImageAndExposure(w,h);
+	coloroutput = new ColorImageAndExposure(w,h);
 	if(file=="" || vignetteImage=="")
 	{
 		printf("NO PHOTOMETRIC Calibration!\n");
@@ -121,6 +124,7 @@ PhotometricUndistorter::PhotometricUndistorter(
 	MinimalImageB* vm8 = IOWrap::readImageBW_8U(vignetteImage.c_str());
 	vignetteMap = new float[w*h];
 	vignetteMapInv = new float[w*h];
+	vignetteColorMapInv = new float[w*h][3];
 
 	if(vm16 != 0)
 	{
@@ -170,8 +174,11 @@ PhotometricUndistorter::PhotometricUndistorter(
 	if(vm8!=0) delete vm8;
 
 
-	for(int i=0;i<w*h;i++)
+	for(int i=0;i<w*h;i++){
 		vignetteMapInv[i] = 1.0f / vignetteMap[i];
+		for(int u=0;u<3;++u)
+			vignetteColorMapInv[i][u] = vignetteMapInv[i];
+	}
 
 
 	printf("Successfully read photometric calibration!\n");
@@ -181,6 +188,7 @@ PhotometricUndistorter::~PhotometricUndistorter()
 {
 	if(vignetteMap != 0) delete[] vignetteMap;
 	if(vignetteMapInv != 0) delete[] vignetteMapInv;
+	if(vignetteColorMapInv != 0) delete[] vignetteColorMapInv;
 	delete output;
 }
 
@@ -254,6 +262,51 @@ template void PhotometricUndistorter::processFrame<unsigned char>(unsigned char*
 template void PhotometricUndistorter::processFrame<unsigned short>(unsigned short* image_in, float exposure_time, float factor);
 
 
+template<typename T>
+void PhotometricUndistorter::processColorFrame(T* image_in, float exposure_time, float factor)
+{
+	int wh=w*h;
+    Vec3b *data  = coloroutput->image;
+	// printf("bbbbbbbbbbbbbbbbbbbb\n");
+	assert(coloroutput->w == w && coloroutput->h == h);
+	assert(data != 0);
+
+
+	if(!valid || exposure_time <= 0 || setting_photometricCalibration==0) // disable full photometric calibration.
+	{
+		for(int i=0; i<wh;i++)
+		{
+			for(int u=0; u<3;u++)
+				data[i][u] = factor*image_in[i][u];
+		}
+		coloroutput->exposure_time = exposure_time;
+		coloroutput->timestamp = 0;
+	}
+	else
+	{
+		for(int i=0; i<wh;i++)
+		{
+			for(int u=0; u<3;u++)
+				data[i][u] = G[image_in[i][u]];
+		}
+
+		if(setting_photometricCalibration==2)
+		{
+			for(int i=0; i<wh;i++)
+				for(int u=0; u<3;u++)
+					data[i][u] *= vignetteColorMapInv[i][u];
+		}
+
+		coloroutput->exposure_time = exposure_time;
+		coloroutput->timestamp = 0;
+	}
+
+
+	if(!setting_useExposure)
+		coloroutput->exposure_time = 1;
+
+}
+template void PhotometricUndistorter::processColorFrame<Vec3b>(Vec3b* image_in, float exposure_time, float factor);
 
 
 
@@ -484,6 +537,108 @@ template ImageAndExposure* Undistort::undistort<unsigned char>(const MinimalImag
 template ImageAndExposure* Undistort::undistort<unsigned short>(const MinimalImage<unsigned short>* image_raw, float exposure, double timestamp, float factor) const;
 
 
+template<typename T>
+ColorImageAndExposure* Undistort::colorundistort(const MinimalImage<T>* image_raw, float exposure, double timestamp, float factor) const
+{
+	if(image_raw->w != wOrg || image_raw->h != hOrg)
+	{
+		printf("Undistort::undistort: wrong image size (%d %d instead of %d %d) \n", image_raw->w, image_raw->h, w, h);
+		exit(1);
+	}
+
+	photometricUndist->processColorFrame<T>(image_raw->data, exposure, factor);
+	ColorImageAndExposure* result = new ColorImageAndExposure(w, h, timestamp);
+	photometricUndist->coloroutput->copyMetaTo(*result);
+
+	if (!passthrough)
+	{
+		Vec3b* out_data = result->image;
+		Vec3b* in_data = photometricUndist->coloroutput->image;
+
+		float* noiseMapX=0;
+		float* noiseMapY=0;
+		if(benchmark_varNoise>0)
+		{
+			int numnoise=(benchmark_noiseGridsize+8)*(benchmark_noiseGridsize+8);
+			noiseMapX=new float[numnoise];
+			noiseMapY=new float[numnoise];
+			memset(noiseMapX,0,sizeof(float)*numnoise);
+			memset(noiseMapY,0,sizeof(float)*numnoise);
+
+			for(int i=0;i<numnoise;i++)
+			{
+				noiseMapX[i] =  2*benchmark_varNoise * (rand()/(float)RAND_MAX - 0.5f);
+				noiseMapY[i] =  2*benchmark_varNoise * (rand()/(float)RAND_MAX - 0.5f);
+			}
+		}
+
+
+		for(int idx = w*h-1;idx>=0;idx--)
+		{
+			// get interp. values
+			float xx = remapX[idx];
+			float yy = remapY[idx];
+
+
+
+			if(benchmark_varNoise>0)
+			{
+				float deltax = getInterpolatedElement11BiCub(noiseMapX, 4+(xx/(float)wOrg)*benchmark_noiseGridsize, 4+(yy/(float)hOrg)*benchmark_noiseGridsize, benchmark_noiseGridsize+8 );
+				float deltay = getInterpolatedElement11BiCub(noiseMapY, 4+(xx/(float)wOrg)*benchmark_noiseGridsize, 4+(yy/(float)hOrg)*benchmark_noiseGridsize, benchmark_noiseGridsize+8 );
+				float x = idx%w + deltax;
+				float y = idx/w + deltay;
+				if(x < 0.01) x = 0.01;
+				if(y < 0.01) y = 0.01;
+				if(x > w-1.01) x = w-1.01;
+				if(y > h-1.01) y = h-1.01;
+
+				xx = getInterpolatedElement(remapX, x, y, w);
+				yy = getInterpolatedElement(remapY, x, y, w);
+			}
+
+
+			if(xx<0)
+				for(int u=0; u<3;u++)
+					out_data[idx][u] = 0;
+			else
+			{
+				// get integer and rational parts
+				int xxi = xx;
+				int yyi = yy;
+				xx -= xxi;
+				yy -= yyi;
+				float xxyy = xx*yy;
+
+				// get array base pointer
+				const Vec3b* src = in_data + xxi + yyi * wOrg;
+
+				// interpolate (bilinear)
+				for(int u=0; u<3;u++)
+					out_data[idx][u] =  xxyy * src[1+wOrg][u]
+										+ (yy-xxyy) * src[wOrg][u]
+										+ (xx-xxyy) * src[1][u]
+										+ (1-xx-yy+xxyy) * src[0][u];
+			}
+		}
+
+		if(benchmark_varNoise>0)
+		{
+			delete[] noiseMapX;
+			delete[] noiseMapY;
+		}
+
+	}
+	else
+	{
+		memcpy(result->image, photometricUndist->coloroutput->image, sizeof(float)*w*h);
+	}
+
+	applyBlurNoise(result->image);
+
+	return result;
+}
+template ColorImageAndExposure* Undistort::colorundistort<Vec3b>(const MinimalImage<Vec3b>* image_raw, float exposure, double timestamp, float factor) const;
+
 void Undistort::applyBlurNoise(float* img) const
 {
 	if(benchmark_varBlurNoise==0) return;
@@ -578,6 +733,110 @@ void Undistort::applyBlurNoise(float* img) const
 			}
 			img[x+y*this->w] = sumCW / sumW;
 		}
+
+
+
+	delete[] noiseMapX;
+	delete[] noiseMapY;
+}
+
+
+void Undistort::applyBlurNoise(Vec3b *img) const
+{
+	if(benchmark_varBlurNoise==0) return;
+
+	int numnoise=(benchmark_noiseGridsize+8)*(benchmark_noiseGridsize+8);
+	float* noiseMapX=new float[numnoise];
+	float* noiseMapY=new float[numnoise];
+	Vec3b* blutTmp=new Vec3b[w*h];
+
+	if(benchmark_varBlurNoise>0)
+	{
+		for(int i=0;i<numnoise;i++)
+		{
+				noiseMapX[i] =  benchmark_varBlurNoise  * (rand()/(float)RAND_MAX);
+				noiseMapY[i] =  benchmark_varBlurNoise  * (rand()/(float)RAND_MAX);
+		}
+	}
+
+
+	float gaussMap[1000];
+	for(int i=0;i<1000;i++)
+		gaussMap[i] = expf((float)(-i*i/(100.0*100.0)));
+
+	// x-blur.
+	for(int y=0;y<h;y++)
+		for(int x=0;x<w;x++)
+			for(int rgb=0;rgb<3;rgb++)
+			{
+				float xBlur = getInterpolatedElement11BiCub(noiseMapX,
+						4+(x/(float)w)*benchmark_noiseGridsize,
+						4+(y/(float)h)*benchmark_noiseGridsize,
+						benchmark_noiseGridsize+8 );
+
+				if(xBlur < 0.01) xBlur=0.01;
+
+
+				int kernelSize = 1 + (int)(1.0f+xBlur*1.5);
+				float sumW=0;
+				float sumCW=0;
+				for(int dx=0; dx <= kernelSize; dx++)
+				{
+					int gmid = 100.0f*dx/xBlur + 0.5f;
+					if(gmid > 900 ) gmid = 900;
+					float gw = gaussMap[gmid];
+
+					if(x+dx>0 && x+dx<w)
+					{
+						sumW += gw;
+						sumCW += gw * img[x+dx+y*this->w][rgb];
+					}
+
+					if(x-dx>0 && x-dx<w && dx!=0)
+					{
+						sumW += gw;
+						sumCW += gw * img[x-dx+y*this->w][rgb];
+					}
+				}
+
+				blutTmp[x+y*this->w][rgb] = sumCW / sumW;
+			}
+
+	// y-blur.
+	for(int x=0;x<w;x++)
+		for(int y=0;y<h;y++)
+			for(int rgb=0;rgb<3;rgb++)
+			{
+				float yBlur = getInterpolatedElement11BiCub(noiseMapY,
+						4+(x/(float)w)*benchmark_noiseGridsize,
+						4+(y/(float)h)*benchmark_noiseGridsize,
+						benchmark_noiseGridsize+8 );
+
+				if(yBlur < 0.01) yBlur=0.01;
+
+				int kernelSize = 1 + (int)(0.9f+yBlur*2.5);
+				float sumW=0;
+				float sumCW=0;
+				for(int dy=0; dy <= kernelSize; dy++)
+				{
+					int gmid = 100.0f*dy/yBlur + 0.5f;
+					if(gmid > 900 ) gmid = 900;
+					float gw = gaussMap[gmid];
+
+					if(y+dy>0 && y+dy<h)
+					{
+						sumW += gw;
+						sumCW += gw * blutTmp[x+(y+dy)*this->w][rgb];
+					}
+
+					if(y-dy>0 && y-dy<h && dy!=0)
+					{
+						sumW += gw;
+						sumCW += gw * blutTmp[x+(y-dy)*this->w][rgb];
+					}
+				}
+				img[x+y*this->w][rgb] = sumCW / sumW;
+			}
 
 
 

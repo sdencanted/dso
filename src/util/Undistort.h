@@ -49,9 +49,12 @@ public:
 	// raw irradiance = a*I + b.
 	// output will be written in [output].
 	template<typename T> void processFrame(T* image_in, float exposure_time, float factor=1);
+	template<typename T> void processColorFrame(T* image_in, float exposure_time, float factor=1);
 	void unMapFloatImage(float* image);
 
 	ImageAndExposure* output;
+
+	ColorImageAndExposure* coloroutput;
 
 	float* getG() {if(!valid) return 0; else return G;};
 private:
@@ -59,6 +62,7 @@ private:
     int GDepth;
 	float* vignetteMap;
 	float* vignetteMapInv;
+	float(* vignetteColorMapInv)[3];
 	int w,h;
 	bool valid;
 };
@@ -81,6 +85,10 @@ public:
 
 	template<typename T>
 	ImageAndExposure* undistort(const MinimalImage<T>* image_raw, float exposure=0, double timestamp=0, float factor=1) const;
+	
+	
+	template<typename T>
+	ColorImageAndExposure* colorundistort(const MinimalImage<T>* image_raw, float exposure=0, double timestamp=0, float factor=1) const;
 	static Undistort* getUndistorterForFile(std::string configFilename, std::string gammaFilename, std::string vignetteFilename);
 
 	void loadPhotometricCalibration(std::string file, std::string noiseImage, std::string vignetteImage);
@@ -99,7 +107,7 @@ protected:
 	float* remapY;
 
 	void applyBlurNoise(float* img) const;
-
+	void applyBlurNoise(Vec3b* img) const;
 	void makeOptimalK_crop();
 	void makeOptimalK_full();
 

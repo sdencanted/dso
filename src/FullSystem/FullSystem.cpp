@@ -268,14 +268,22 @@ void FullSystem::printResult(std::string file)
 }
 
 
+
+void FullSystem::addActiveColorFrame( ColorImageAndExposure* image ){
+    for(IOWrap::Output3DWrapper* ow : outputWrapper){
+        ow->pushLiveFrame(image);
+	}
+}
+
 Vec4 FullSystem::trackNewCoarse(FrameHessian* fh)
 {
 
 	assert(allFrameHistory.size() > 0);
 	// set pose initialization.
 
-    for(IOWrap::Output3DWrapper* ow : outputWrapper)
-        ow->pushLiveFrame(fh);
+    // for(IOWrap::Output3DWrapper* ow : outputWrapper){
+    //     ow->pushLiveFrame(fh);
+	// }
 
 
 
@@ -798,7 +806,26 @@ void FullSystem::flagPointsForRemoval()
 
 }
 
+int FullSystem::getselectedkf(){
+	// for(IOWrap::Output3DWrapper* ow : outputWrapper)
 
+		return outputWrapper[0]->getselectedkf();
+}
+void FullSystem::addRequestedFrame( ColorImageAndExposure* image, int id ){
+	// FrameHessian* fh = new FrameHessian();
+	// FrameShell* shell = new FrameShell();
+	// shell->camToWorld = SE3(); 		// no lock required, as fh is not used anywhere yet.
+	// shell->aff_g2l = AffLight(0,0);
+    // shell->marginalizedAt = shell->id = allFrameHistory.size();
+    // shell->timestamp = image->timestamp;
+    // shell->incoming_id = id;
+	// fh->shell = shell;
+	// fh->ab_exposure = image->exposure_time;
+    // fh->makeImages(image->image, &Hcalib);
+
+	// outputWrapper[0]->pushRequestedFrame(fh);
+	outputWrapper[0]->pushRequestedFrame(image);
+}
 void FullSystem::addActiveFrame( ImageAndExposure* image, int id )
 {
 

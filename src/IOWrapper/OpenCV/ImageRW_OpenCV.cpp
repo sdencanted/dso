@@ -104,6 +104,23 @@ MinimalImageB* readStreamBW_8U(char* data, int numBytes)
 	return img;
 }
 
+MinimalImageB3* readStreamRGB_8U(char* data, int numBytes)
+{
+	cv::Mat m = cv::imdecode(cv::Mat(numBytes,1,CV_8U, data), CV_LOAD_IMAGE_COLOR);
+	if(m.rows*m.cols==0)
+	{
+		printf("cv::imdecode could not read stream (%d bytes)! this may segfault. \n", numBytes);
+		return 0;
+	}
+	if(m.type() != CV_8UC3)
+	{
+		printf("cv::imdecode did something strange! this may segfault. \n");
+		return 0;
+	} 
+	MinimalImageB3* img = new MinimalImageB3(m.cols, m.rows);
+	memcpy(img->data, m.data, 3*m.rows*m.cols);
+	return img;
+}
 
 
 void writeImage(std::string filename, MinimalImageB* img)

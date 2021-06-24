@@ -29,8 +29,11 @@
 #include "IOWrapper/Output3DWrapper.h"
 #include <map>
 #include <deque>
+#include "util/ImageAndExposure.h"
+#include <pangolin/gl/glfont.h>
+#include <pangolin/gl/gltext.h>
 
-
+#include <vector>
 namespace dso
 {
 
@@ -58,6 +61,9 @@ public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     PangolinDSOViewer(int w, int h, bool startRunThread=true);
 	virtual ~PangolinDSOViewer();
+	virtual int getselectedkf() override;
+	bool selectedkfchange;
+	int selectedkf;
 
 	void run();
 	void close();
@@ -72,7 +78,9 @@ public:
     virtual void publishCamPose(FrameShell* frame, CalibHessian* HCalib) override;
 
 
+    virtual void pushLiveFrame(ColorImageAndExposure* image) override;
     virtual void pushLiveFrame(FrameHessian* image) override;
+    virtual void pushRequestedFrame(ColorImageAndExposure* image) override;
     virtual void pushDepthImage(MinimalImageB3* image) override;
     virtual bool needPushDepthImage() override;
 
@@ -80,7 +88,7 @@ public:
 
     virtual void reset() override;
 private:
-
+	enum PlaybackMode { PAUSE, FORWARD, REVERSE };
 	bool needReset;
 	void reset_internal();
 	void drawConstraints();
@@ -94,9 +102,10 @@ private:
 	// images rendering
 	boost::mutex openImagesMutex;
 	MinimalImageB3* internalVideoImg;
+	MinimalImageB3* internalVideoPlayerImg;
 	MinimalImageB3* internalKFImg;
 	MinimalImageB3* internalResImg;
-	bool videoImgChanged, kfImgChanged, resImgChanged;
+	bool videoImgChanged, kfImgChanged, resImgChanged, videoPlayerImgChanged;
 
 
 

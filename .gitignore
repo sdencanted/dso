@@ -8,3 +8,5 @@ build-*
 *.a
 *.so.*
 thirdparty/libzip-1.1.1
+pointcloud109.png
+save/image137.png
