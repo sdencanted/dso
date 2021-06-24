@@ -189,7 +189,8 @@ namespace dso
 			std::vector<std::vector<float>> markings;
 			pangolin::TypedImage pointcloud;
 			pangolin::TypedImage image;
-			framedata() : markings(), pointcloud(), image() {}
+			double timestamp;
+			framedata() : markings(), pointcloud(), image(), timestamp() {}
 			// framedata(std::vector<std::vector<float>> newmarkings, pangolin::TypedImage newpointcloud, pangolin::TypedImage newimage) : markings(newmarkings), pointcloud(newpointcloud), image(newimage) {}
 		};
 		PangolinDSOViewer::PangolinDSOViewer(int w, int h, bool startRunThread)
@@ -287,13 +288,13 @@ namespace dso
 
 			// 3D visualization
 			pangolin::OpenGlRenderState Visualization3D_camera(
-				pangolin::ProjectionMatrix(2*w/5, h, 400, 400, 2*w / 10, h / 2, 0.1, 1000),
+				pangolin::ProjectionMatrix(2 * w / 5, h, 400, 400, 2 * w / 10, h / 2, 0.1, 1000),
 				pangolin::ModelViewLookAt(-0, -5, -10, 0, 0, 0, pangolin::AxisNegY));
 			bool checkObject = false;
 			int rx = 0;
 			int ry = 0;
 			pangolin::View &Visualization3D_display = pangolin::CreateDisplay()
-														  .SetBounds(0, 1.0, pangolin::Attach::Pix(UI_WIDTH+1), 0.5, -(2*w/5) / (float)h)
+														  .SetBounds(0, 1.0, pangolin::Attach::Pix(UI_WIDTH + 1), 0.5, -(2 * w / 5) / (float)h)
 														  .SetHandler(new pangolin::MyHandler3D(Visualization3D_camera, checkObject, rx, ry));
 
 			// 3 images + player
@@ -410,7 +411,7 @@ namespace dso
 						}
 						int kfcolor[3] = {255, 255, 255};
 						currentCam->drawCam(2, kfcolor, 0.2);
-						drawConstraints();
+						// drawConstraints();
 
 						glReadBuffer(GL_BACK);
 						glReadPixels(rx, ry, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
@@ -439,20 +440,28 @@ namespace dso
 						{ //some other frame berhaps
 							if (selectedkf != returnId)
 							{
-								selectedkf = returnId;
-								selectedkfchange = true;
-								for (int i = 0; i < keyframes.size(); ++i)
+
+								for (KeyFrameDisplay *fh : keyframes)
 								{
-									if (keyframes[i]->id == selectedkf)
+									if (returnId == fh->id)
 									{
-										selectedkf_index = i;
+										selectedkf = returnId;
+										selectedkfchange = true;
+										for (int i = 0; i < keyframes.size(); ++i)
+										{
+											if (keyframes[i]->id == selectedkf)
+											{
+												selectedkf_index = i;
+												break;
+											}
+										}
+										firsthorizontal = 0;
+										secondhorizontal = 0;
+										firstvertical = 0;
+										secondvertical = 0;
 										break;
 									}
 								}
-								firsthorizontal = 0;
-								secondhorizontal = 0;
-								firstvertical = 0;
-								secondvertical = 0;
 							}
 							printf("clicked on ID %d with array position %d\n", returnId, selectedkf_index);
 						}
@@ -503,7 +512,7 @@ namespace dso
 					drawConstraints();
 					lk3d.unlock();
 				}
-				glClearColor(0.0f, 0.0f, 0.0f, 1.0f); 
+				glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 				openImagesMutex.lock();
 				if (videoImgChanged)
 					texVideo.Upload(internalVideoImg->data, GL_BGR, GL_UNSIGNED_BYTE);
@@ -541,16 +550,18 @@ namespace dso
 
 				if (setting_render_displayVideo)
 				{
-					d_video.Activate();
-					glColor3ub(255, 0, 0);
-					//label the window
-					// glEnable(GL_BLEND);
-					// glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,GL_ONE, GL_ONE);
-					myfont.Text("original video").DrawWindow(d_video.GetBounds().l, d_video.GetBounds().t() - 1.0f * myfont.Height());
-					// glDisable(GL_BLEND);
-					glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-					texVideo.RenderToViewportFlipY();
-
+					if (selectedkf != -1)
+					{
+						d_video.Activate();
+						glColor3ub(255, 0, 0);
+						//label the window
+						// glEnable(GL_BLEND);
+						// glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,GL_ONE, GL_ONE);
+						myfont.Text("original video").DrawWindow(d_video.GetBounds().l, d_video.GetBounds().b - 1.0f * myfont.Height());
+						// glDisable(GL_BLEND);
+						glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+						texVideo.RenderToViewportFlipY();
+					}
 					d_video_player.Activate();
 					glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 					if (checkfirst)
@@ -578,32 +589,22 @@ namespace dso
 							coords.push_back(firstvertical);
 							coords.push_back(secondhorizontal);
 							coords.push_back(secondvertical);
-							// std::copy(Visualization3D_camera.GetModelViewMatrix().m,coords.m);
-							// for (int i = 0; i < 16; i++)
-							// 	coords.m[i] = Visualization3D_camera.GetModelViewMatrix().m[i];
-
-							// memcpy(Visualization3D_camera.GetModelViewMatrix().m,coords.m,16);
-							// coords.m = Visualization3D_camera.GetModelViewMatrix().m;
-							// std::vector<float> coords;
-							// coords.push_back(firsthorizontal);
-							// coords.push_back(firstvertical);
-							// coords.push_back(secondhorizontal);
-							// coords.push_back(secondvertical);
-							if (markings.find(selectedkf) != markings.end())
-							{ //entry already exists
-								markings[selectedkf].markings.push_back(coords);
-							}
-							else
+							if (markings.find(selectedkf) == markings.end())
 							{
-								// std::vector<std::vector<float>> coord_vector;
-								// framedata frame;
-								// frame.markings.push_back(coords);
-								// std::vector<framedata> coord_vector;
-								// coord_vector.push_back(coords);
 								markings.insert(std::make_pair(selectedkf, framedata()));
-								markings[selectedkf].markings.push_back(coords);
-								// markings[selectedkf]=frame;
 							}
+							printf("a\n");
+							markings[selectedkf].markings.push_back(coords);
+							for (auto *fh : keyframes)
+							{
+								if (fh->id == selectedkf)
+								{
+									markings[selectedkf].timestamp = fh->timestamp;
+									printf("a%d\n", fh->timestamp);
+									break;
+								}
+							}
+							printf("a\n");
 							// printf("got %f\n", markings[selectedkf][0].m[1]);
 						}
 					}
@@ -638,26 +639,19 @@ namespace dso
 
 					glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-					// d_video_player_text.Activate();
-
-					glColor3ub(255, 255, 0);
-					//label the window
-					// glEnable(GL_BLEND);
-					// glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,GL_ONE, GL_ONE);
-					mybigfont.Text("Video at selected position").DrawWindow(d_video_player.GetBounds().l, d_video_player.GetBounds().t());
-					// glDisable(GL_BLEND);
-
-					//label the selection
-					glColor3ub(255, 0, 0);
-					// glEnable(GL_BLEND);
-					// glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,GL_ONE, GL_ONE);
-					// myfont.Text(marking_label.Get()).DrawWindow((int)((std::min(firsthorizontal, secondhorizontal) + 1) * (float)(0.5 * d_video_player.GetBounds().w) + d_video_player.GetBounds().l), (int)((std::max(firstvertical, secondvertical) + 1) * (float)(0.5 * d_video_player.GetBounds().h + d_video_player.GetBounds().b)));
-					// glDisable(GL_BLEND);
-
-					glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 					if (selectedkf != -1)
 					{
+						glColor3ub(255, 255, 0);
+						mybigfont.Text("Video at selected position").DrawWindow(d_video_player.GetBounds().l, d_video_player.GetBounds().t());
+						glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 						texVideoPlayer.RenderToViewportFlipY();
+					}
+					else
+					{
+						glColor3ub(255, 255, 0);
+						mybigfont.Text("Original Video").DrawWindow(d_video_player.GetBounds().l, d_video_player.GetBounds().t());
+						glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+						texVideo.RenderToViewportFlipY();
 					}
 				}
 
@@ -668,7 +662,7 @@ namespace dso
 					//label the window
 					// glEnable(GL_BLEND);
 					// glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,GL_ONE, GL_ONE);
-					myfont.Text("features").DrawWindow(d_kfDepth.GetBounds().l, d_kfDepth.GetBounds().t() - 1.0f * myfont.Height());
+					myfont.Text("features").DrawWindow(d_kfDepth.GetBounds().l, d_kfDepth.GetBounds().b - 1.0f * myfont.Height());
 					// glDisable(GL_BLEND);
 					glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 					texKFDepth.RenderToViewportFlipY();
@@ -829,9 +823,10 @@ namespace dso
 
 					for (it = markings.begin(); it != markings.end(); it++)
 					{
-
-						pangolin::SaveImage(it->second.pointcloud, fmt, str(boost::format("save/pointcloud%1%") % it->first) + ".png", false);
-						pangolin::SaveImage(it->second.image, fmt, str(boost::format("save/image%1%") % it->first) + ".png", false);
+						int secs=(it->second.timestamp / 1000000000);
+						int msecs=(it->second.timestamp / 1000000)-secs*1000;
+						pangolin::SaveImage(it->second.pointcloud, fmt, str(boost::format("save/pointcloud%ds_%dms") % secs %msecs ) + ".png", false);
+						pangolin::SaveImage(it->second.image, fmt, str(boost::format("save/image%ds_%dms") % secs %msecs) + ".png", false);
 					}
 				}
 			}
@@ -1027,6 +1022,8 @@ namespace dso
 					keyframes.push_back(kfd);
 				}
 				keyframesByKFID[fh->frameID]->setFromKF(fh, HCalib);
+				keyframesByKFID[fh->frameID]->timestamp = fh->shell->timestamp;
+				printf("timestamp %d", fh->shell->timestamp);
 			}
 		}
 		void PangolinDSOViewer::publishCamPose(FrameShell *frame,
