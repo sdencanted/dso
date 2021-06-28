@@ -493,7 +493,7 @@ namespace dso
 						refreshed += (int)(fh->refreshPC(refreshed < 10, this->settings_scaledVarTH, this->settings_absVarTH,
 														 this->settings_pointCloudMode, this->settings_minRelBS, this->settings_sparsity));
 
-						if (this->settings_showKFCameras)
+						if (this->settings_showKFCameras){
 							if (selectedkf == fh->id && selectedkf != -1)
 							{
 
@@ -503,12 +503,14 @@ namespace dso
 							{
 								fh->drawPC(1, 0);
 							}
+
+							// if (fh->id==keyframes[keyframes.size() - 2]->id)
+							// 	fh->drawPC(1, 0);
+							}
 					}
-					if (this->settings_showCurrentCamera)
-						if (selectedkf == 16777214)
-							currentCam->drawCam(2, blue, 0.2);
-						else
-							currentCam->drawCam(2, 0, 0.2);
+					if (this->settings_showCurrentCamera){
+						currentCam->drawCam(2, 0, 0.2);
+					}
 					drawConstraints();
 					lk3d.unlock();
 				}
@@ -823,10 +825,10 @@ namespace dso
 
 					for (it = markings.begin(); it != markings.end(); it++)
 					{
-						int secs=(it->second.timestamp / 1000000000);
-						int msecs=(it->second.timestamp / 1000000)-secs*1000;
-						pangolin::SaveImage(it->second.pointcloud, fmt, str(boost::format("save/pointcloud%ds_%dms") % secs %msecs ) + ".png", false);
-						pangolin::SaveImage(it->second.image, fmt, str(boost::format("save/image%ds_%dms") % secs %msecs) + ".png", false);
+						int secs = (it->second.timestamp / 1000000000);
+						int msecs = (it->second.timestamp / 1000000) - secs * 1000;
+						pangolin::SaveImage(it->second.pointcloud, fmt, str(boost::format("save/pointcloud%ds_%dms") % secs % msecs) + ".png", false);
+						pangolin::SaveImage(it->second.image, fmt, str(boost::format("save/image%ds_%dms") % secs % msecs) + ".png", false);
 					}
 				}
 			}

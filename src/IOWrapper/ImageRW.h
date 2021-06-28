@@ -32,6 +32,12 @@ namespace dso
 namespace IOWrap
 {
 
+int getNumOfImages();
+int getFrameRate();
+int createCap(std::string filename);
+int deleteCap();
+MinimalImageB* readVideoBW_8U(int id, int width, int height);
+MinimalImageB3* readVideoRGB_8U(int id, int width, int height);
 MinimalImageB* readImageBW_8U(std::string filename);
 MinimalImageB3* readImageRGB_8U(std::string filename);
 MinimalImage<unsigned short>* readImageBW_16U(std::string filename);

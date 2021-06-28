@@ -34,6 +34,7 @@ namespace dso
 
 PointHessian::PointHessian(const ImmaturePoint* const rawPoint, CalibHessian* Hcalib)
 {
+	pixelcolor=rawPoint->pixelcolor;
 	instanceCounter++;
 	host = rawPoint->host;
 	hasDepthPrior=false;

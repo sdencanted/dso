@@ -46,11 +46,14 @@ struct InputPointSparse
 {
 	float u;
 	float v;
+	float uf;
+	float vf;
 	float idpeth;
 	float idepth_hessian;
 	float relObsBaseline;
 	int numGoodRes;
 	unsigned char color[ppp];
+	float pixelcolor[3];
 	unsigned char status;
 };
 

@@ -137,7 +137,7 @@ public:
 
 	// adds a new frame, and creates point & residual structs.
 	void addRequestedFrame(ColorImageAndExposure* image, int id);
-	void addActiveFrame(ImageAndExposure* image, int id);
+	void addActiveFrame(ImageAndExposure* image, int id, ColorImageAndExposure* colorimage);
 	void addActiveColorFrame(ColorImageAndExposure* image);
 	int getselectedkf();
 	// marginalizes a frame. drops / marginalizes points & residuals.

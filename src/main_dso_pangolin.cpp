@@ -144,7 +144,7 @@ void parseArgument(char *arg)
 	int option;
 	float foption;
 	char buf[1000];
-
+    bool lastIsFiles=false;
 	if (1 == sscanf(arg, "sampleoutput=%d", &option))
 	{
 		if (option == 1)
@@ -250,8 +250,9 @@ void parseArgument(char *arg)
 		return;
 	}
 
-	if (1 == sscanf(arg, "files=%s", buf))
+	if (1 == sscanf(arg, "files=%[^\t\n]", buf))
 	{
+		// printf(arg);
 		source = buf;
 		printf("loading data from %s!\n", source.c_str());
 		return;
@@ -388,6 +389,7 @@ int main(int argc, char **argv)
 	std::vector<double> timesToPlayAt;
 	for (int i = lstart; i >= 0 && i < reader->getNumImages() && linc * i < linc * lend; i += linc)
 	{
+		printf("files %s\n",reader->getFileName(i).c_str());
 		idsToPlay.push_back(i);
 		if (timesToPlayAt.size() == 0)
 		{
@@ -463,7 +465,7 @@ int main(int argc, char **argv)
 								  }
 
 								  if (!skipFrame)
-									  fullSystem->addActiveFrame(img, i);
+									  fullSystem->addActiveFrame(img, i,imgColor);
 									  fullSystem->addActiveColorFrame(imgColor);
 
 								  delete img;
@@ -567,7 +569,7 @@ int main(int argc, char **argv)
 		ow->join();
 		delete ow;
 	}
-
+	IOWrap::deleteCap();
 	printf("DELETE FULLSYSTEM!\n");
 	delete fullSystem;
 

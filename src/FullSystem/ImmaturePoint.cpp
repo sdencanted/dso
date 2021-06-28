@@ -29,12 +29,21 @@
 
 namespace dso
 {
-ImmaturePoint::ImmaturePoint(int u_, int v_, FrameHessian* host_, float type, CalibHessian* HCalib)
+// ImmaturePoint::ImmaturePoint(int u_, int v_, FrameHessian* host_, float type, CalibHessian* HCalib, Vec3b*in_color)
+ImmaturePoint::ImmaturePoint(int u_, int v_, FrameHessian* host_, float type, CalibHessian* HCalib, Vec3b * in_color)
 : u(u_), v(v_), host(host_), my_type(type), idepth_min(0), idepth_max(NAN), lastTraceStatus(IPS_UNINITIALIZED)
 {
 
 	gradH.setZero();
-
+	for(int i=0;i<3;i++)
+		pixelcolor[i]=in_color[(int)(u+v*1280)][i];
+	// pixelcolor[2]=255;
+	// pixelcolor[0]=255*((int)u<640);
+	// pixelcolor[1]=255*((int)v<360);
+	uf=u;
+	vf=v;
+	// memcpy(&pixelcolor,&(in_color[(int)(u+v*1280)]),sizeof(pixelcolor));
+	// printf("color %d %d %d pixel %d %d",pixelcolor[0],pixelcolor[1],pixelcolor[2],(int)u,(int)v);
 	for(int idx=0;idx<patternNum;idx++)
 	{
 		int dx = patternP[idx][0];
@@ -45,6 +54,7 @@ ImmaturePoint::ImmaturePoint(int u_, int v_, FrameHessian* host_, float type, Ca
 
 
 		color[idx] = ptc[0];
+		
 		if(!std::isfinite(color[idx])) {energyTH=NAN; return;}
 
 
@@ -502,7 +512,6 @@ double ImmaturePoint::linearizeResidual(
 		float drescale, u, v, new_idepth;
 		float Ku, Kv;
 		Vec3f KliP;
-
 		if(!projectPoint(this->u,this->v, idepth, dx, dy,HCalib,
 				PRE_RTll,PRE_tTll, drescale, u, v, Ku, Kv, KliP, new_idepth))
 			{tmpRes->state_NewState = ResState::OOB; return tmpRes->state_energy;}

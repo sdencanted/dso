@@ -68,7 +68,7 @@ class ColorImageAndExposure
 {
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-	Vec3b *image ;			// irradiance. between 0 and 256
+	Vec3b *image ;			// color
 	int w,h;				// width and height;
 	double timestamp;
 	float exposure_time;	// exposure time in ms.

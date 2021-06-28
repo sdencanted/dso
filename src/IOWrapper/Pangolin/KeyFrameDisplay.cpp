@@ -105,9 +105,15 @@ void KeyFrameDisplay::setFromKF(FrameHessian* fh, CalibHessian* HCalib)
 	{
 		for(int i=0;i<patternNum;i++)
 			pc[numSparsePoints].color[i] = p->color[i];
+		for(int u=0;u<3;u++)
+			pc[numSparsePoints].pixelcolor[u] = p->pixelcolor[u];
 
 		pc[numSparsePoints].u = p->u;
 		pc[numSparsePoints].v = p->v;
+		pc[numSparsePoints].uf = p->uf;
+		pc[numSparsePoints].vf = p->vf;
+		printf("pt %d %d %d %d\n",(int)p->u,(int)p->uf,(int)p->v,(int)p->vf);
+		
 		pc[numSparsePoints].idpeth = (p->idepth_max+p->idepth_min)*0.5f;
 		pc[numSparsePoints].idepth_hessian = 1000;
 		pc[numSparsePoints].relObsBaseline = 0;
@@ -120,6 +126,8 @@ void KeyFrameDisplay::setFromKF(FrameHessian* fh, CalibHessian* HCalib)
 	{
 		for(int i=0;i<patternNum;i++)
 			pc[numSparsePoints].color[i] = p->color[i];
+		for(int u=0;u<3;u++)
+			pc[numSparsePoints].pixelcolor[u] = p->pixelcolor[u];
 		pc[numSparsePoints].u = p->u;
 		pc[numSparsePoints].v = p->v;
 		pc[numSparsePoints].idpeth = p->idepth_scaled;
@@ -135,6 +143,8 @@ void KeyFrameDisplay::setFromKF(FrameHessian* fh, CalibHessian* HCalib)
 	{
 		for(int i=0;i<patternNum;i++)
 			pc[numSparsePoints].color[i] = p->color[i];
+		for(int u=0;u<3;u++)
+			pc[numSparsePoints].pixelcolor[u] = p->pixelcolor[u];
 		pc[numSparsePoints].u = p->u;
 		pc[numSparsePoints].v = p->v;
 		pc[numSparsePoints].idpeth = p->idepth_scaled;
@@ -281,9 +291,21 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
 			}
 			else
 			{
-				tmpColorBuffer[vertexBufferNumPoints][0] = originalInputSparse[i].color[pnt];
-				tmpColorBuffer[vertexBufferNumPoints][1] = originalInputSparse[i].color[pnt];
-				tmpColorBuffer[vertexBufferNumPoints][2] = originalInputSparse[i].color[pnt];
+				// tmpColorBuffer[vertexBufferNumPoints][0] = originalInputSparse[i].color[pnt];
+				// tmpColorBuffer[vertexBufferNumPoints][1] = originalInputSparse[i].color[pnt];
+				// tmpColorBuffer[vertexBufferNumPoints][2] = originalInputSparse[i].color[pnt];
+
+				tmpColorBuffer[vertexBufferNumPoints][0] = (unsigned char)(originalInputSparse[i].pixelcolor[2]);
+				tmpColorBuffer[vertexBufferNumPoints][1] = (unsigned char)(originalInputSparse[i].pixelcolor[1]);
+				tmpColorBuffer[vertexBufferNumPoints][2] = (unsigned char)(originalInputSparse[i].pixelcolor[0]);
+				// printf("sus amogus %d %d %d %d \n",(int)originalInputSparse[i].u,(int)originalInputSparse[i].uf,(int)originalInputSparse[i].v,(int)originalInputSparse[i].vf);
+
+				// tmpColorBuffer[vertexBufferNumPoints][2] = (unsigned char)((originalInputSparse[i].u>640)*255);//blue
+				// tmpColorBuffer[vertexBufferNumPoints][1] = (unsigned char)((originalInputSparse[i].v>360)*255);//green
+				// tmpColorBuffer[vertexBufferNumPoints][0] = (unsigned char)(originalInputSparse[i].pixelcolor[0]);
+
+
+				// printf("color %d %d %d",tmpColorBuffer[vertexBufferNumPoints][0],tmpColorBuffer[vertexBufferNumPoints][1],tmpColorBuffer[vertexBufferNumPoints][2]);
 			}
 			vertexBufferNumPoints++;
 
@@ -408,11 +430,11 @@ void KeyFrameDisplay::drawPC(float pointSize,int* color)
 		glPointSize(pointSize);
 
 
-		// colorBuffer.Bind();
+		colorBuffer.Bind();
 		if(color == 0)
 		{
-			glColor3ub(255,255,255);
-			// glColorPointer(colorBuffer.count_per_element, colorBuffer.datatype, 0, 0);
+			// glColor3ub(255,255,255);
+			glColorPointer(colorBuffer.count_per_element, colorBuffer.datatype, 0, 0);
 		}
 		else{
 			glColor3ub(color[0],color[1],color[2]);
@@ -426,7 +448,7 @@ void KeyFrameDisplay::drawPC(float pointSize,int* color)
 			// }
 			// glColorPointer(colorBuffer.count_per_element, GL_UNSIGNED_BYTE, 0, colorpointer);
 		}
-		// glEnableClientState(GL_COLOR_ARRAY);
+		glEnableClientState(GL_COLOR_ARRAY);
 
 		vertexBuffer.Bind();
 		glVertexPointer(vertexBuffer.count_per_element, vertexBuffer.datatype, 0, 0);
@@ -436,8 +458,8 @@ void KeyFrameDisplay::drawPC(float pointSize,int* color)
 		glDisableClientState(GL_VERTEX_ARRAY);
 		vertexBuffer.Unbind();
 
-		// glDisableClientState(GL_COLOR_ARRAY);
-		// colorBuffer.Unbind();
+		glDisableClientState(GL_COLOR_ARRAY);
+		colorBuffer.Unbind();
 
 	glPopMatrix();
 }
