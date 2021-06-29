@@ -13,12 +13,10 @@ if [ -e "$1" ]; then
 	echo $fps
 	build/bin/dso_dataset \
 			files="$videofolder" \
-			calib=~/dso/firefly/camera.txt \
+			calib=~/dso/fireflycamera.txt \
 			preset=0 \
 			mode=1 \
 			fps=$fps
-
-			# files=/home/pootis/dso/firefly/video2ffmpeg \
 elif [ ! -e "$1" ]; then
 	echo "Video $1 not found!"
 fi
