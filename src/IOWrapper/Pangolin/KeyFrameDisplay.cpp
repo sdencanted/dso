@@ -103,17 +103,13 @@ void KeyFrameDisplay::setFromKF(FrameHessian* fh, CalibHessian* HCalib)
 	numSparsePoints=0;
 	for(ImmaturePoint* p : fh->immaturePoints)
 	{
-		for(int i=0;i<patternNum;i++)
-			pc[numSparsePoints].color[i] = p->color[i];
-		for(int u=0;u<3;u++)
-			pc[numSparsePoints].pixelcolor[u] = p->pixelcolor[u];
+		for(int i=0;i<patternNum;i++){
+			pc[numSparsePoints].color[i] = p->color[i]; // unused
+			for(int u=0;u<3;u++)
+				pc[numSparsePoints].pixelcolor[i][u] = p->pixelcolor[i][u];}
 
 		pc[numSparsePoints].u = p->u;
-		pc[numSparsePoints].v = p->v;
-		pc[numSparsePoints].uf = p->uf;
-		pc[numSparsePoints].vf = p->vf;
-		printf("pt %d %d %d %d\n",(int)p->u,(int)p->uf,(int)p->v,(int)p->vf);
-		
+		pc[numSparsePoints].v = p->v;	
 		pc[numSparsePoints].idpeth = (p->idepth_max+p->idepth_min)*0.5f;
 		pc[numSparsePoints].idepth_hessian = 1000;
 		pc[numSparsePoints].relObsBaseline = 0;
@@ -124,10 +120,10 @@ void KeyFrameDisplay::setFromKF(FrameHessian* fh, CalibHessian* HCalib)
 
 	for(PointHessian* p : fh->pointHessians)
 	{
-		for(int i=0;i<patternNum;i++)
-			pc[numSparsePoints].color[i] = p->color[i];
-		for(int u=0;u<3;u++)
-			pc[numSparsePoints].pixelcolor[u] = p->pixelcolor[u];
+		for(int i=0;i<patternNum;i++){
+			pc[numSparsePoints].color[i] = p->color[i]; // unused
+			for(int u=0;u<3;u++)
+				pc[numSparsePoints].pixelcolor[i][u] = p->pixelcolor[i][u];}
 		pc[numSparsePoints].u = p->u;
 		pc[numSparsePoints].v = p->v;
 		pc[numSparsePoints].idpeth = p->idepth_scaled;
@@ -141,10 +137,10 @@ void KeyFrameDisplay::setFromKF(FrameHessian* fh, CalibHessian* HCalib)
 
 	for(PointHessian* p : fh->pointHessiansMarginalized)
 	{
-		for(int i=0;i<patternNum;i++)
+		for(int i=0;i<patternNum;i++){
 			pc[numSparsePoints].color[i] = p->color[i];
-		for(int u=0;u<3;u++)
-			pc[numSparsePoints].pixelcolor[u] = p->pixelcolor[u];
+			for(int u=0;u<3;u++)
+				pc[numSparsePoints].pixelcolor[i][u] = p->pixelcolor[i][u];}
 		pc[numSparsePoints].u = p->u;
 		pc[numSparsePoints].v = p->v;
 		pc[numSparsePoints].idpeth = p->idepth_scaled;
@@ -157,8 +153,10 @@ void KeyFrameDisplay::setFromKF(FrameHessian* fh, CalibHessian* HCalib)
 
 	for(PointHessian* p : fh->pointHessiansOut)
 	{
-		for(int i=0;i<patternNum;i++)
-			pc[numSparsePoints].color[i] = p->color[i];
+		for(int i=0;i<patternNum;i++){
+			pc[numSparsePoints].color[i] = p->color[i];// unused
+			for(int u=0;u<3;u++)
+				pc[numSparsePoints].pixelcolor[i][u] = p->pixelcolor[i][u];}
 		pc[numSparsePoints].u = p->u;
 		pc[numSparsePoints].v = p->v;
 		pc[numSparsePoints].idpeth = p->idepth_scaled;
@@ -291,21 +289,9 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
 			}
 			else
 			{
-				// tmpColorBuffer[vertexBufferNumPoints][0] = originalInputSparse[i].color[pnt];
-				// tmpColorBuffer[vertexBufferNumPoints][1] = originalInputSparse[i].color[pnt];
-				// tmpColorBuffer[vertexBufferNumPoints][2] = originalInputSparse[i].color[pnt];
-
-				tmpColorBuffer[vertexBufferNumPoints][0] = (unsigned char)(originalInputSparse[i].pixelcolor[2]);
-				tmpColorBuffer[vertexBufferNumPoints][1] = (unsigned char)(originalInputSparse[i].pixelcolor[1]);
-				tmpColorBuffer[vertexBufferNumPoints][2] = (unsigned char)(originalInputSparse[i].pixelcolor[0]);
-				// printf("sus amogus %d %d %d %d \n",(int)originalInputSparse[i].u,(int)originalInputSparse[i].uf,(int)originalInputSparse[i].v,(int)originalInputSparse[i].vf);
-
-				// tmpColorBuffer[vertexBufferNumPoints][2] = (unsigned char)((originalInputSparse[i].u>640)*255);//blue
-				// tmpColorBuffer[vertexBufferNumPoints][1] = (unsigned char)((originalInputSparse[i].v>360)*255);//green
-				// tmpColorBuffer[vertexBufferNumPoints][0] = (unsigned char)(originalInputSparse[i].pixelcolor[0]);
-
-
-				// printf("color %d %d %d",tmpColorBuffer[vertexBufferNumPoints][0],tmpColorBuffer[vertexBufferNumPoints][1],tmpColorBuffer[vertexBufferNumPoints][2]);
+				tmpColorBuffer[vertexBufferNumPoints][0] = (unsigned char)(originalInputSparse[i].pixelcolor[pnt][2]);
+				tmpColorBuffer[vertexBufferNumPoints][1] = (unsigned char)(originalInputSparse[i].pixelcolor[pnt][1]);
+				tmpColorBuffer[vertexBufferNumPoints][2] = (unsigned char)(originalInputSparse[i].pixelcolor[pnt][0]);
 			}
 			vertexBufferNumPoints++;
 
@@ -438,22 +424,12 @@ void KeyFrameDisplay::drawPC(float pointSize,int* color)
 		}
 		else{
 			glColor3ub(color[0],color[1],color[2]);
-			// GLubyte colorb[]={0,0,255,255};
-			// GLubyte colorpointer[colorBuffer.count_per_element*4]={};
-			// for (int i=0;i<colorBuffer.count_per_element;++i){
-			// 	colorpointer[0+i*4]=0;
-			// 	colorpointer[1+i*4]=0;
-			// 	colorpointer[2+i*4]=255;
-			// 	colorpointer[3+i*4]=255;
-			// }
-			// glColorPointer(colorBuffer.count_per_element, GL_UNSIGNED_BYTE, 0, colorpointer);
 		}
 		glEnableClientState(GL_COLOR_ARRAY);
 
 		vertexBuffer.Bind();
 		glVertexPointer(vertexBuffer.count_per_element, vertexBuffer.datatype, 0, 0);
 		glEnableClientState(GL_VERTEX_ARRAY);
-
 		glDrawArrays(GL_POINTS, 0, numGLBufferGoodPoints);
 		glDisableClientState(GL_VERTEX_ARRAY);
 		vertexBuffer.Unbind();

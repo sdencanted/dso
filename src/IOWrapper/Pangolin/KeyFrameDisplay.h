@@ -28,6 +28,7 @@
 #include <Eigen/Core>
 #include "util/NumType.h"
 #include <pangolin/pangolin.h>
+#include "util/settings.h"
 
 #include <sstream>
 #include <fstream>
@@ -46,14 +47,12 @@ struct InputPointSparse
 {
 	float u;
 	float v;
-	float uf;
-	float vf;
 	float idpeth;
 	float idepth_hessian;
 	float relObsBaseline;
 	int numGoodRes;
 	unsigned char color[ppp];
-	float pixelcolor[3];
+	float pixelcolor[patternNum][3];
 	unsigned char status;
 };
 
@@ -72,7 +71,7 @@ public:
 	KeyFrameDisplay();
 	~KeyFrameDisplay();
 
-	double timestamp;
+	double timestamp; // copied from image
 
 	// copies points from KF over to internal buffer,
 	// keeping some additional information so we can render it differently.

@@ -56,6 +56,7 @@ bool disableROS = false;
 int start = 0;
 int end = 100000;
 bool prefetch = false;
+int fps=0;
 float playbackSpeed = 0; // 0 for linearize (play as fast as possible, while sequentializing tracking & mapping). otherwise, factor on timestamps.
 bool preload = false;
 bool useSampleOutput = false;
@@ -120,7 +121,6 @@ void settingsDefault(int preset)
 			   "- 1-4 LM iteration each KF\n"
 			   "- 424 x 320 image resolution\n",
 			   preset == 0 ? "no " : "5x");
-
 		playbackSpeed = (preset == 2 ? 0 : 5);
 		preload = preset == 3;
 		setting_desiredImmatureDensity = 600;
@@ -135,7 +135,6 @@ void settingsDefault(int preset)
 
 		setting_logStuff = false;
 	}
-
 	printf("==============================================\n");
 }
 
@@ -293,6 +292,13 @@ void parseArgument(char *arg)
 		return;
 	}
 
+
+	if (1 == sscanf(arg, "fps=%f", &foption))
+	{
+		fps = (int)foption;
+		printf("FRAME RATE %d!\n", fps);
+		return;
+	}
 	if (1 == sscanf(arg, "save=%d", &option))
 	{
 		if (option == 1)
@@ -345,7 +351,7 @@ int main(int argc, char **argv)
 	//setlocale(LC_ALL, "");
 	for (int i = 1; i < argc; i++)
 		parseArgument(argv[i]);
-
+	setting_fps=fps;
 	// hook crtl+C.
 	boost::thread exThread = boost::thread(exitThread);
 
@@ -389,7 +395,7 @@ int main(int argc, char **argv)
 	std::vector<double> timesToPlayAt;
 	for (int i = lstart; i >= 0 && i < reader->getNumImages() && linc * i < linc * lend; i += linc)
 	{
-		printf("files %s\n",reader->getFileName(i).c_str());
+		// printf("files %s\n",reader->getFileName(i).c_str());
 		idsToPlay.push_back(i);
 		if (timesToPlayAt.size() == 0)
 		{
@@ -546,8 +552,6 @@ int main(int argc, char **argv)
 									 kfid = fullSystem->getselectedkf();
 									 if (kfid != -1)
 									 {
-										 printf("%daaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa%d\n", kfid, idsToPlay[kfid]);
-
 										 boost::unique_lock<boost::mutex> lkim(imageMutex);
 										 kimg = reader->getColorImage(idsToPlay[kfid]);
 										 lkim.unlock();

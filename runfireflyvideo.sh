@@ -9,12 +9,14 @@ if [ -e "$1" ]; then
 		mkdir "$videofolder"
 		ffmpeg -i "$1" -vf scale=1280:720,setsar=1:1 -qscale:v 5 "$videofolder/%03d.jpg"
 	fi
-
+	fps=`ffmpeg -i "$1" 2>&1 | sed -n "s/.*, \(.*\) fp.*/\1/p"`
+	echo $fps
 	build/bin/dso_dataset \
 			files="$videofolder" \
 			calib=~/dso/firefly/camera.txt \
 			preset=0 \
-			mode=1
+			mode=1 \
+			fps=$fps
 
 			# files=/home/pootis/dso/firefly/video2ffmpeg \
 elif [ ! -e "$1" ]; then

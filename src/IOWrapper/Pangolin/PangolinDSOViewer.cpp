@@ -122,6 +122,7 @@ namespace pangolin
 			}
 		}
 	};
+	// to draw boxes in display
 	struct MyHandler2D : Handler
 	{
 	protected:
@@ -177,13 +178,14 @@ namespace pangolin
 
 namespace pangolin
 {
+	//for drawing text
 	extern "C" const unsigned char AnonymousPro_ttf[];
 }
 namespace dso
 {
 	namespace IOWrap
 	{
-
+		// to hold information on marking boxes made, as well as screenshots of the scene and point cloud
 		struct framedata
 		{
 			std::vector<std::vector<float>> markings;
@@ -191,7 +193,6 @@ namespace dso
 			pangolin::TypedImage image;
 			double timestamp;
 			framedata() : markings(), pointcloud(), image(), timestamp() {}
-			// framedata(std::vector<std::vector<float>> newmarkings, pangolin::TypedImage newpointcloud, pangolin::TypedImage newimage) : markings(newmarkings), pointcloud(newpointcloud), image(newimage) {}
 		};
 		PangolinDSOViewer::PangolinDSOViewer(int w, int h, bool startRunThread)
 		{
@@ -205,7 +206,6 @@ namespace dso
 				internalVideoImg = new MinimalImageB3(w, h);
 				internalVideoPlayerImg = new MinimalImageB3(w, h);
 				internalKFImg = new MinimalImageB3(w, h);
-				// internalResImg = new MinimalImageB3(w, h);
 				videoImgChanged = videoPlayerImgChanged = kfImgChanged = resImgChanged = true;
 
 				internalVideoImg->setBlack();
@@ -278,13 +278,11 @@ namespace dso
 			pangolin::GlFont mybigfont(pangolin::AnonymousPro_ttf, 30);
 			pangolin::GlFont myfont(pangolin::AnonymousPro_ttf, 15);
 			pangolin::CreateWindowAndBind("Main", 2 * w, 2 * h);
-			GLubyte pixel[4]; // An RGBA pixel.
+			GLubyte pixel[4]; // used to detect the object clicked by the user
 			glEnable(GL_DEPTH_TEST);
 			glEnable(GL_BLEND);
 			glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
 			const int UI_WIDTH = 180;
-
-			//    glEnable(GL_DEPTH_TEST);
 
 			// 3D visualization
 			pangolin::OpenGlRenderState Visualization3D_camera(
@@ -375,7 +373,6 @@ namespace dso
 			pangolin::Var<bool> settings_deleteMarkings("ui.Delete Frame Markings", false, false);
 			pangolin::Var<bool> settings_saveMarkings("ui.Save Markings", false, false);
 			std::string marking_text = "eg. fault";
-			// pangolin::Var<std::string> marking_label("ui.label", marking_text, true);
 			bool saveimage = false;
 
 			// Default hooks for exiting (Esc) and fullscreen (tab).
@@ -391,10 +388,6 @@ namespace dso
 					{
 						checkObject = false;
 						printf("received\n");
-						// GLfloat pixel[4]; // An RGBA pixel.
-						// GLint value;
-
-						// glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 						glDrawBuffer(GL_BACK);
 
 						// Activate efficiently by object
@@ -437,7 +430,7 @@ namespace dso
 							}
 						}
 						else
-						{ //some other frame berhaps
+						{ //clicked some other frame perhaps
 							if (selectedkf != returnId)
 							{
 
@@ -493,7 +486,8 @@ namespace dso
 						refreshed += (int)(fh->refreshPC(refreshed < 10, this->settings_scaledVarTH, this->settings_absVarTH,
 														 this->settings_pointCloudMode, this->settings_minRelBS, this->settings_sparsity));
 
-						if (this->settings_showKFCameras){
+						if (this->settings_showKFCameras)
+						{
 							if (selectedkf == fh->id && selectedkf != -1)
 							{
 
@@ -503,12 +497,10 @@ namespace dso
 							{
 								fh->drawPC(1, 0);
 							}
-
-							// if (fh->id==keyframes[keyframes.size() - 2]->id)
-							// 	fh->drawPC(1, 0);
-							}
+						}
 					}
-					if (this->settings_showCurrentCamera){
+					if (this->settings_showCurrentCamera)
+					{
 						currentCam->drawCam(2, 0, 0.2);
 					}
 					drawConstraints();
@@ -556,11 +548,7 @@ namespace dso
 					{
 						d_video.Activate();
 						glColor3ub(255, 0, 0);
-						//label the window
-						// glEnable(GL_BLEND);
-						// glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,GL_ONE, GL_ONE);
 						myfont.Text("original video").DrawWindow(d_video.GetBounds().l, d_video.GetBounds().b - 1.0f * myfont.Height());
-						// glDisable(GL_BLEND);
 						glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 						texVideo.RenderToViewportFlipY();
 					}
@@ -602,12 +590,9 @@ namespace dso
 								if (fh->id == selectedkf)
 								{
 									markings[selectedkf].timestamp = fh->timestamp;
-									printf("a%d\n", fh->timestamp);
 									break;
 								}
 							}
-							printf("a\n");
-							// printf("got %f\n", markings[selectedkf][0].m[1]);
 						}
 					}
 					glPushMatrix();
@@ -661,11 +646,7 @@ namespace dso
 				{
 					d_kfDepth.Activate();
 					glColor3ub(255, 0, 0);
-					//label the window
-					// glEnable(GL_BLEND);
-					// glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,GL_ONE, GL_ONE);
 					myfont.Text("features").DrawWindow(d_kfDepth.GetBounds().l, d_kfDepth.GetBounds().b - 1.0f * myfont.Height());
-					// glDisable(GL_BLEND);
 					glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 					texKFDepth.RenderToViewportFlipY();
 				}
@@ -677,8 +658,6 @@ namespace dso
 				// 	texResidual.RenderToViewportFlipY();
 				// }
 
-				// TODO: grab image of selected keyframe and dump
-				// texKFDepth.RenderToViewportFlipY();
 
 				// update parameters
 				this->settings_pointCloudMode = settings_pointCloudMode.Get();
@@ -817,7 +796,6 @@ namespace dso
 				}
 				if (settings_saveMarkings.Get())
 				{
-					// glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 					printf("saving markings!\n");
 					settings_saveMarkings.Reset();
 					std::map<int, framedata>::iterator it;
@@ -825,10 +803,12 @@ namespace dso
 
 					for (it = markings.begin(); it != markings.end(); it++)
 					{
-						int secs = (it->second.timestamp / 1000000000);
+						int mins= (int)((it->second.timestamp / 1000000000)/60);
+						int secs = (it->second.timestamp / 1000000000)-mins*60;
 						int msecs = (it->second.timestamp / 1000000) - secs * 1000;
-						pangolin::SaveImage(it->second.pointcloud, fmt, str(boost::format("save/pointcloud%ds_%dms") % secs % msecs) + ".png", false);
-						pangolin::SaveImage(it->second.image, fmt, str(boost::format("save/image%ds_%dms") % secs % msecs) + ".png", false);
+
+						pangolin::SaveImage(it->second.pointcloud, fmt, str(boost::format("save/pointcloud_%dmin_%ds_%dms") % mins % secs % msecs) + ".png", false);
+						pangolin::SaveImage(it->second.image, fmt, str(boost::format("save/image_%dmin_%ds_%dms") % mins % secs % msecs) + ".png", false);
 					}
 				}
 			}
@@ -1025,7 +1005,6 @@ namespace dso
 				}
 				keyframesByKFID[fh->frameID]->setFromKF(fh, HCalib);
 				keyframesByKFID[fh->frameID]->timestamp = fh->shell->timestamp;
-				printf("timestamp %d", fh->shell->timestamp);
 			}
 		}
 		void PangolinDSOViewer::publishCamPose(FrameShell *frame,
@@ -1106,8 +1085,6 @@ namespace dso
 				internalVideoPlayerImg->data[i][2] =
 					image->image[i][2] > 255.0f ? 255.0 : image->image[i][2];
 			}
-
-			// memcpy(internalVideoPlayerImg->data, image->image, w * h * 3);
 			videoPlayerImgChanged = true;
 		}
 

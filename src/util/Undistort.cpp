@@ -447,7 +447,7 @@ ImageAndExposure* Undistort::undistort(const MinimalImage<T>* image_raw, float e
 	photometricUndist->processFrame<T>(image_raw->data, exposure, factor);
 	ImageAndExposure* result = new ImageAndExposure(w, h, timestamp);
 	photometricUndist->output->copyMetaTo(*result);
-
+	
 	if (!passthrough)
 	{
 		float* out_data = result->image;

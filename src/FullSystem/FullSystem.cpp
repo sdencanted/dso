@@ -260,6 +260,7 @@ namespace dso
 		myfile.close();
 	}
 
+	// Push live color frame to pangolin UI
 	void FullSystem::addActiveColorFrame(ColorImageAndExposure *image)
 	{
 		for (IOWrap::Output3DWrapper *ow : outputWrapper)
@@ -768,24 +769,10 @@ namespace dso
 
 	int FullSystem::getselectedkf()
 	{
-		// for(IOWrap::Output3DWrapper* ow : outputWrapper)
-
 		return outputWrapper[0]->getselectedkf();
 	}
 	void FullSystem::addRequestedFrame(ColorImageAndExposure *image, int id)
 	{
-		// FrameHessian* fh = new FrameHessian();
-		// FrameShell* shell = new FrameShell();
-		// shell->camToWorld = SE3(); 		// no lock required, as fh is not used anywhere yet.
-		// shell->aff_g2l = AffLight(0,0);
-		// shell->marginalizedAt = shell->id = allFrameHistory.size();
-		// shell->timestamp = image->timestamp;
-		// shell->incoming_id = id;
-		// fh->shell = shell;
-		// fh->ab_exposure = image->exposure_time;
-		// fh->makeImages(image->image, &Hcalib);
-
-		// outputWrapper[0]->pushRequestedFrame(fh);
 		outputWrapper[0]->pushRequestedFrame(image);
 	}
 	void FullSystem::addActiveFrame(ImageAndExposure *image, int id, ColorImageAndExposure *colorimage)
@@ -810,12 +797,6 @@ namespace dso
 		fh->ab_exposure = image->exposure_time;
 		fh->makeImages(image->image, &Hcalib);
 
-		// printf("size %d %d", sizeof(colorimage->image), wG[0] * hG[0]);
-		// for (int i = 0; i < wG[0] * hG[0]; i++)
-		// {
-		// 	printf("pixels %d %d %d", colorimage->image[i][0], colorimage->image[i][1], colorimage->image[i][2]);
-		// }
-		// printf("pixels %d %d %d", colorimage->image[wG[0] * hG[0]-1][0], colorimage->image[wG[0] * hG[0]-1][1], colorimage->image[wG[0] * hG[0]-1][2]);
 		fh->colorimage = &(colorimage->image);
 
 		if (!initialized)
@@ -1128,10 +1109,6 @@ namespace dso
 		// =========================== add new Immature points & new residuals =========================
 		makeNewTraces(fh, 0);
 
-		// =========================== Color Immature point ================================
-		for(auto *impt:fh->immaturePoints){
-			printf("pt %d %d %d %d\n",(int)impt->u,(int)impt->uf,(int)impt->v,(int)impt->vf);
-		}
 		for (IOWrap::Output3DWrapper *ow : outputWrapper)
 		{
 			ow->publishGraph(ef->connectivityMap);
@@ -1146,7 +1123,6 @@ namespace dso
 				marginalizeFrame(frameHessians[i]);
 				i = 0;
 			}
-
 
 		printLogLine();
 		//printEigenValLine();
@@ -1193,9 +1169,7 @@ namespace dso
 				continue;
 
 			Pnt *point = coarseInitializer->points[0] + i;
-			// Vec3b*color=&newFrame->colorimage[(int)(point->u+0.5f)+(int)(point->v+0.5f)*wG[0]];
-			// Vec3b color = (*newFrame->colorimage)[(int)(point->u + 0.5f) + (int)(point->v + 0.5f) * wG[0]];
-			ImmaturePoint *pt = new ImmaturePoint(point->u + 0.5f, point->v + 0.5f, firstFrame, point->my_type, &Hcalib, *newFrame->colorimage);
+			ImmaturePoint *pt = new ImmaturePoint(point->u + 0.5f, point->v + 0.5f, firstFrame, point->my_type, &Hcalib, *newFrame->colorimage); // add color image to color each point
 
 			if (!std::isfinite(pt->energyTH))
 			{
@@ -1254,31 +1228,18 @@ namespace dso
 		//fh->pointHessiansInactive.reserve(numPointsTotal*1.2f);
 		newFrame->pointHessiansMarginalized.reserve(numPointsTotal * 1.2f);
 		newFrame->pointHessiansOut.reserve(numPointsTotal * 1.2f);
-		printf("size %d %d", sizeof(*(newFrame->colorimage)), wG[0] * hG[0]);
 		for (int y = patternPadding + 1; y < hG[0] - patternPadding - 2; y++)
 			for (int x = patternPadding + 1; x < wG[0] - patternPadding - 2; x++)
 			{
 				int i = x + y * wG[0];
 				if (selectionMap[i] == 0)
 					continue;
-				// // Vec3b*color=&newFrame->colorimage[i];
-				// Vec3b color = (*newFrame->colorimage)[x + y * wG[0]];
-				// printf("\n orig %d %d %d\n",(*newFrame->colorimage)[x + y * wG[0]][2],(*newFrame->colorimage)[x + y * wG[0]][1],(*newFrame->colorimage)[x + y * wG[0]][0]);
-				// 	printf("pointer\npointer %d %d %d\n",color[2],color[1],color[0]);
-				// // if(x<100 && y<100)
-				// // 	printf("a\n""a\n""a\n""a\n""a\n""a\n""a\n");
-
-				// Vec3b color;
-				// color[0]=255*(x>640);//blue
-				// color[1]=255*(y>360);//green
-				// color[2]=255;//red
-				ImmaturePoint *impt = new ImmaturePoint(x, y, newFrame, selectionMap[i], &Hcalib, *newFrame->colorimage);
+				ImmaturePoint *impt = new ImmaturePoint(x, y, newFrame, selectionMap[i], &Hcalib, *newFrame->colorimage);// add color image to color each point
 				if (!std::isfinite(impt->energyTH))
 					delete impt;
 				else
 					newFrame->immaturePoints.push_back(impt);
 			}
-		//printf("MADE %d IMMATURE POINTS!\n", (int)newFrame->immaturePoints.size());
 	}
 
 	void FullSystem::setPrecalcValues()

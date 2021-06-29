@@ -61,8 +61,14 @@ public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     PangolinDSOViewer(int w, int h, bool startRunThread=true);
 	virtual ~PangolinDSOViewer();
+
+	// returns the selected keyframe if it is the first time the keyframe was requested, else return -1
 	virtual int getselectedkf() override;
+
+	// track if the select4ed keyframe as been requested before
 	bool selectedkfchange;
+
+	// the keyframe clicked by the user
 	int selectedkf;
 
 	void run();
@@ -77,9 +83,11 @@ public:
     virtual void publishKeyframes( std::vector<FrameHessian*> &frames, bool final, CalibHessian* HCalib) override;
     virtual void publishCamPose(FrameShell* frame, CalibHessian* HCalib) override;
 
-
+	// like the original pushLiveFrame but has color
     virtual void pushLiveFrame(ColorImageAndExposure* image) override;
     virtual void pushLiveFrame(FrameHessian* image) override;
+
+	// push the selected keyframe's color image 
     virtual void pushRequestedFrame(ColorImageAndExposure* image) override;
     virtual void pushDepthImage(MinimalImageB3* image) override;
     virtual bool needPushDepthImage() override;

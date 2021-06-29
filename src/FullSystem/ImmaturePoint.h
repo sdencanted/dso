@@ -57,9 +57,9 @@ class ImmaturePoint
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 	// static values
-	float color[MAX_RES_PER_POINT];
+	float color[MAX_RES_PER_POINT]; // unused
 	float weights[MAX_RES_PER_POINT];
-	Vec3b pixelcolor;
+	Vec3b pixelcolor[patternNum]; // new color variable
 
 
 
@@ -69,7 +69,6 @@ public:
 	Mat22f gradH_eig;
 	float energyTH;
 	float u,v;
-	float uf,vf;
 	FrameHessian* host;
 	int idxInImmaturePoints;
 
@@ -79,7 +78,6 @@ public:
 
 	float idepth_min;
 	float idepth_max;
-	// ImmaturePoint(int u_, int v_, FrameHessian* host_, float type, CalibHessian* HCalib, Vec3b*in_color);
 	ImmaturePoint(int u_, int v_, FrameHessian* host_, float type, CalibHessian* HCalib, Vec3b * in_color);
 	~ImmaturePoint();
 

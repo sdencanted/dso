@@ -109,7 +109,7 @@ struct FrameFramePrecalc
 
 struct FrameHessian
 {
-	Vec3b **colorimage;
+	Vec3b **colorimage; // pointer to color image
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 	EFFrame* efFrame;
 
@@ -410,7 +410,7 @@ struct PointHessian
 	// static values
 	float color[MAX_RES_PER_POINT];			// colors in host frame
 	float weights[MAX_RES_PER_POINT];		// host-weights for respective residuals.
-	Vec3b pixelcolor;
+	Vec3b pixelcolor[patternNum]; // rgb pixel color values
 
 
 	float u,v;
@@ -466,6 +466,7 @@ struct PointHessian
 
 	inline bool isOOB(const std::vector<FrameHessian*>& toKeep, const std::vector<FrameHessian*>& toMarg) const
 	{
+		
 		int visInToMarg = 0;
 		for(PointFrameResidual* r : residuals)
 		{

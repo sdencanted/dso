@@ -54,14 +54,15 @@ inline int getdir(std::string dir, std::vector<std::string> &files)
 	while ((dirp = readdir(dp)) != NULL)
 	{
 		std::string name = std::string(dirp->d_name);
-		// printf(dirp->d_name);
-		// printf("%s\n",std::string(dirp->d_name).c_str());
 		if (name != "." && name != "..")
 			files.push_back(name);
 	}
 	closedir(dp);
-	SI::natural::sort(files.begin(), files.end());
-	// std::sort(files.begin(), files.end());
+	
+	if(dir.length() > 6 && dir.substr(dir.length() - 6) == "ffmpeg") // is FFmpeg path
+		SI::natural::sort(files.begin(), files.end());
+	else 
+		std::sort(files.begin(), files.end());
 
 	if (dir.at(dir.length() - 1) != '/')
 		dir = dir + "/";
@@ -184,7 +185,8 @@ public:
 
 		delete undistort;
 	};
-	std::string getFileName(int id){
+	std::string getFileName(int id)
+	{
 		return files[id];
 	}
 	Eigen::VectorXf getOriginalCalib()
@@ -215,7 +217,7 @@ public:
 	{
 		if (isVid)
 		{
-			return IOWrap::getNumOfImages(); //cap.get(cv::CAP_PROP_FRAME_COUNT);
+			return IOWrap::getNumOfImages(); 
 		}
 		return files.size();
 	}
@@ -226,8 +228,9 @@ public:
 		{
 			return (float)id / IOWrap::getFrameRate();
 		}
-		if (isFfmpeg){
-			return (float)id / 60;
+		if (isFfmpeg)
+		{
+			return (float)id / setting_fps;
 		}
 		else
 		{
@@ -361,7 +364,12 @@ private:
 		ImageAndExposure *ret2 = undistort->undistort<unsigned char>(
 			minimg,
 			(exposures.size() == 0 ? 1.0f : exposures[id]),
-			(timestamps.size() == 0 ? 0.0 : timestamps[id]));
+			(timestamps.size() == 0 ? 1.0f : timestamps[id]));
+		if (isFfmpeg)
+		{
+			ret2->timestamp = (double)id * 1000000000 / setting_fps;
+			// printf("\n\n\n\ntimestamp %d\n\n\n\n", (int)ret2->timestamp);
+		}
 		delete minimg;
 		return ret2;
 	}
@@ -372,12 +380,17 @@ private:
 		ColorImageAndExposure *ret2 = undistort->colorundistort<Vec3b>(
 			minimg,
 			(exposures.size() == 0 ? 1.0f : exposures[id]),
-			(timestamps.size() == 0 ? 0.0 : timestamps[id]));
+			(timestamps.size() == 0 ? 1.0f : timestamps[id]));
+		if (isFfmpeg)
+		{
+			ret2->timestamp = (double)id * 1000000000 / setting_fps;
+		}
 		delete minimg;
 		return ret2;
 	}
 	inline void loadTimestamps()
 	{
+
 		std::ifstream tr;
 		std::string timesFile = path.substr(0, path.find_last_of('/')) + "/times.txt";
 		tr.open(timesFile.c_str());
