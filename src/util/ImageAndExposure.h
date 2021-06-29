@@ -25,6 +25,7 @@
 #pragma once
 #include <cstring>
 #include <iostream>
+#include "util/MinimalImage.h"
 
 
 namespace dso
@@ -63,5 +64,36 @@ public:
 	}
 };
 
+class ColorImageAndExposure
+{
+public:
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+	Vec3b *image ;			// color
+	int w,h;				// width and height;
+	double timestamp;
+	float exposure_time;	// exposure time in ms.
+	inline ColorImageAndExposure(int w_, int h_, double timestamp_=0) : w(w_), h(h_), timestamp(timestamp_)
+	{
+		image = new Vec3b[w*h];
+		exposure_time=1;
+	}
+	inline ~ColorImageAndExposure()
+	{
+		delete[] image;
+	}
+
+	inline void copyMetaTo(ColorImageAndExposure &other)
+	{
+		other.exposure_time = exposure_time;
+	}
+
+	inline ColorImageAndExposure* getDeepCopy()
+	{
+		ColorImageAndExposure* img = new ColorImageAndExposure(w,h,timestamp);
+		img->exposure_time = exposure_time;
+		memcpy(img->image, image, w*h*sizeof(float));
+		return img;
+	}
+};
 
 }

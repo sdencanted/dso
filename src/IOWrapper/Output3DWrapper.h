@@ -29,6 +29,7 @@
 
 #include "util/NumType.h"
 #include "util/MinimalImage.h"
+#include "util/ImageAndExposure.h"
 #include "map"
 
 namespace cv {
@@ -115,7 +116,7 @@ class Output3DWrapper
 public:
         Output3DWrapper() {}
         virtual ~Output3DWrapper() {}
-
+        virtual int getselectedkf(){};
 
         /*  Usage:
          *  Called once after each new Keyframe is inserted & optimized.
@@ -170,9 +171,22 @@ public:
          * Calling:
          * Always called, no overhead if not used.
          */
+        virtual void pushLiveFrame(ColorImageAndExposure* image) {}
+
+        /* Usage:
+         * Called once for each new frame, before it is tracked (i.e., it doesn't have a pose yet).
+         *
+         * Calling:
+         * Always called, no overhead if not used.
+         */
         virtual void pushLiveFrame(FrameHessian* image) {}
 
 
+
+        /* Usage:
+         * tbd
+         */
+        virtual void pushRequestedFrame(ColorImageAndExposure* image ) {}
 
 
         /* called once after a new keyframe is created, with the color-coded, forward-warped inverse depthmap for that keyframe,

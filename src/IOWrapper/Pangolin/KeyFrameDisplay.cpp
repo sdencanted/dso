@@ -103,11 +103,13 @@ void KeyFrameDisplay::setFromKF(FrameHessian* fh, CalibHessian* HCalib)
 	numSparsePoints=0;
 	for(ImmaturePoint* p : fh->immaturePoints)
 	{
-		for(int i=0;i<patternNum;i++)
-			pc[numSparsePoints].color[i] = p->color[i];
+		for(int i=0;i<patternNum;i++){
+			pc[numSparsePoints].color[i] = p->color[i]; // unused
+			for(int u=0;u<3;u++)
+				pc[numSparsePoints].pixelcolor[i][u] = p->pixelcolor[i][u];}
 
 		pc[numSparsePoints].u = p->u;
-		pc[numSparsePoints].v = p->v;
+		pc[numSparsePoints].v = p->v;	
 		pc[numSparsePoints].idpeth = (p->idepth_max+p->idepth_min)*0.5f;
 		pc[numSparsePoints].idepth_hessian = 1000;
 		pc[numSparsePoints].relObsBaseline = 0;
@@ -118,8 +120,10 @@ void KeyFrameDisplay::setFromKF(FrameHessian* fh, CalibHessian* HCalib)
 
 	for(PointHessian* p : fh->pointHessians)
 	{
-		for(int i=0;i<patternNum;i++)
-			pc[numSparsePoints].color[i] = p->color[i];
+		for(int i=0;i<patternNum;i++){
+			pc[numSparsePoints].color[i] = p->color[i]; // unused
+			for(int u=0;u<3;u++)
+				pc[numSparsePoints].pixelcolor[i][u] = p->pixelcolor[i][u];}
 		pc[numSparsePoints].u = p->u;
 		pc[numSparsePoints].v = p->v;
 		pc[numSparsePoints].idpeth = p->idepth_scaled;
@@ -133,8 +137,10 @@ void KeyFrameDisplay::setFromKF(FrameHessian* fh, CalibHessian* HCalib)
 
 	for(PointHessian* p : fh->pointHessiansMarginalized)
 	{
-		for(int i=0;i<patternNum;i++)
+		for(int i=0;i<patternNum;i++){
 			pc[numSparsePoints].color[i] = p->color[i];
+			for(int u=0;u<3;u++)
+				pc[numSparsePoints].pixelcolor[i][u] = p->pixelcolor[i][u];}
 		pc[numSparsePoints].u = p->u;
 		pc[numSparsePoints].v = p->v;
 		pc[numSparsePoints].idpeth = p->idepth_scaled;
@@ -147,8 +153,10 @@ void KeyFrameDisplay::setFromKF(FrameHessian* fh, CalibHessian* HCalib)
 
 	for(PointHessian* p : fh->pointHessiansOut)
 	{
-		for(int i=0;i<patternNum;i++)
-			pc[numSparsePoints].color[i] = p->color[i];
+		for(int i=0;i<patternNum;i++){
+			pc[numSparsePoints].color[i] = p->color[i];// unused
+			for(int u=0;u<3;u++)
+				pc[numSparsePoints].pixelcolor[i][u] = p->pixelcolor[i][u];}
 		pc[numSparsePoints].u = p->u;
 		pc[numSparsePoints].v = p->v;
 		pc[numSparsePoints].idpeth = p->idepth_scaled;
@@ -281,9 +289,9 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
 			}
 			else
 			{
-				tmpColorBuffer[vertexBufferNumPoints][0] = originalInputSparse[i].color[pnt];
-				tmpColorBuffer[vertexBufferNumPoints][1] = originalInputSparse[i].color[pnt];
-				tmpColorBuffer[vertexBufferNumPoints][2] = originalInputSparse[i].color[pnt];
+				tmpColorBuffer[vertexBufferNumPoints][0] = (unsigned char)(originalInputSparse[i].pixelcolor[pnt][2]);
+				tmpColorBuffer[vertexBufferNumPoints][1] = (unsigned char)(originalInputSparse[i].pixelcolor[pnt][1]);
+				tmpColorBuffer[vertexBufferNumPoints][2] = (unsigned char)(originalInputSparse[i].pixelcolor[pnt][0]);
 			}
 			vertexBufferNumPoints++;
 
@@ -316,9 +324,34 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
 	return true;
 }
 
+void drawSphere(double r, int lats, int longs) {
+    int i, j;
+    for(i = 0; i <= lats; i++) {
+        double lat0 = M_PI * (-0.5 + (double) (i - 1) / lats);
+        double z0  = sin(lat0);
+        double zr0 =  cos(lat0);
+
+        double lat1 = M_PI * (-0.5 + (double) i / lats);
+        double z1 = sin(lat1);
+        double zr1 = cos(lat1);
+
+        glBegin(GL_QUAD_STRIP);
+        for(j = 0; j <= longs; j++) {
+            double lng = 2 * M_PI * (double) (j - 1) / longs;
+            double x = cos(lng);
+            double y = sin(lng);
+
+            glNormal3f(x * zr0, y * zr0, z0);
+            glVertex3f(r * x * zr0, r * y * zr0, r * z0);
+            glNormal3f(x * zr1, y * zr1, z1);
+            glVertex3f(r * x * zr1, r * y * zr1, r * z1);
+        }
+        glEnd();
+    }
+}
 
 
-void KeyFrameDisplay::drawCam(float lineWidth, float* color, float sizeFactor)
+void KeyFrameDisplay::drawCam(float lineWidth, int* color, float sizeFactor)
 {
 	if(width == 0)
 		return;
@@ -332,10 +365,10 @@ void KeyFrameDisplay::drawCam(float lineWidth, float* color, float sizeFactor)
 
 		if(color == 0)
 		{
-			glColor3f(1,0,0);
+			glColor3ub(255,0,0);
 		}
 		else
-			glColor3f(color[0],color[1],color[2]);
+			glColor3ub(color[0],color[1],color[2]);
 
 		glLineWidth(lineWidth);
 		glBegin(GL_LINES);
@@ -361,11 +394,12 @@ void KeyFrameDisplay::drawCam(float lineWidth, float* color, float sizeFactor)
 		glVertex3f(sz*(width-1-cx)/fx,sz*(0-cy)/fy,sz);
 
 		glEnd();
+		drawSphere(sz*0.3,5,5);
 	glPopMatrix();
 }
 
 
-void KeyFrameDisplay::drawPC(float pointSize)
+void KeyFrameDisplay::drawPC(float pointSize,int* color)
 {
 
 	if(!bufferValid || numGLBufferGoodPoints==0)
@@ -383,7 +417,14 @@ void KeyFrameDisplay::drawPC(float pointSize)
 
 
 		colorBuffer.Bind();
-		glColorPointer(colorBuffer.count_per_element, colorBuffer.datatype, 0, 0);
+		if(color == 0)
+		{
+			// glColor3ub(255,255,255);
+			glColorPointer(colorBuffer.count_per_element, colorBuffer.datatype, 0, 0);
+		}
+		else{
+			glColor3ub(color[0],color[1],color[2]);
+		}
 		glEnableClientState(GL_COLOR_ARRAY);
 
 		vertexBuffer.Bind();

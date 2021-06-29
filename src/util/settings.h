@@ -85,6 +85,8 @@ extern float setting_desiredImmatureDensity;			// done
 extern float setting_desiredPointDensity;			// done
 extern float setting_minPointsRemaining;
 extern float setting_maxLogAffFacInWindow;
+
+extern int setting_fps;
 extern int setting_minFrames;
 extern int setting_maxFrames;
 extern int setting_minFrameAge;

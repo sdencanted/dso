@@ -20,7 +20,7 @@ find_package(Boost COMPONENTS system thread)
 # optional libraries
 find_package(LibZip QUIET)
 find_package(Pangolin 0.2 QUIET)
-find_package(OpenCV QUIET)
+find_package(OpenCV 3 QUIET)
 
 # flags
 add_definitions("-DENABLE_SSE")
@@ -67,7 +67,7 @@ include_directories(
 
 # decide if we have pangolin
 if (Pangolin_FOUND)
-	message("--- found PANGOLIN, compiling dso_pangolin library.")
+	message("--- found PANGOLIN, compiling dso_pangolin library. ${Pangolin_INCLUDE_DIRS}")
 	include_directories( ${Pangolin_INCLUDE_DIRS} ) 
 	set(dso_pangolin_SOURCE_FILES 
 	  ${PROJECT_SOURCE_DIR}/src/IOWrapper/Pangolin/KeyFrameDisplay.cpp

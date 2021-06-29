@@ -74,7 +74,7 @@ float setting_desiredPointDensity = 2000; // aimed total points in the active wi
 float setting_minPointsRemaining = 0.05;  // marg a frame if less than X% points remain.
 float setting_maxLogAffFacInWindow = 0.7; // marg a frame if factor between intensities to current frame is larger than 1/X or X.
 
-
+int   setting_fps=30; //input video frame rate for FFmpeg converted video
 int   setting_minFrames = 5; // min frames in window.
 int   setting_maxFrames = 7; // max frames in window.
 int   setting_minFrameAge = 1;

@@ -82,9 +82,9 @@ bool CoarseInitializer::trackFrame(FrameHessian* newFrameHessian, std::vector<IO
 {
 	newFrame = newFrameHessian;
 
-    for(IOWrap::Output3DWrapper* ow : wraps)
-        ow->pushLiveFrame(newFrameHessian);
-
+    // for(IOWrap::Output3DWrapper* ow : wraps)
+    //     ow->pushLiveFrame(newFrameHessian);
+	// Live frame is pushed directly from main_dso_pangolin to enable color
 	int maxIterations[] = {5,5,10,30,50};
 
 

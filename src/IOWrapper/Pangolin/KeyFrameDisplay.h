@@ -28,6 +28,7 @@
 #include <Eigen/Core>
 #include "util/NumType.h"
 #include <pangolin/pangolin.h>
+#include "util/settings.h"
 
 #include <sstream>
 #include <fstream>
@@ -51,6 +52,7 @@ struct InputPointSparse
 	float relObsBaseline;
 	int numGoodRes;
 	unsigned char color[ppp];
+	float pixelcolor[patternNum][3];
 	unsigned char status;
 };
 
@@ -69,6 +71,8 @@ public:
 	KeyFrameDisplay();
 	~KeyFrameDisplay();
 
+	double timestamp; // copied from image
+
 	// copies points from KF over to internal buffer,
 	// keeping some additional information so we can render it differently.
 	void setFromKF(FrameHessian* fh, CalibHessian* HCalib);
@@ -81,8 +85,8 @@ public:
 	bool refreshPC(bool canRefresh, float scaledTH, float absTH, int mode, float minBS, int sparsity);
 
 	// renders cam & pointcloud.
-	void drawCam(float lineWidth = 1, float* color = 0, float sizeFactor=1);
-	void drawPC(float pointSize);
+	void drawCam(float lineWidth = 1, int* color = 0, float sizeFactor=1);
+	void drawPC(float pointSize,int* color=0);
 
 	int id;
 	bool active;

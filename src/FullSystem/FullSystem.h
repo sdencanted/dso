@@ -134,10 +134,18 @@ public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 	FullSystem();
 	virtual ~FullSystem();
+	// adds the frame requested by the user in pangolin.
+	void addRequestedFrame(ColorImageAndExposure* image, int id);
 
 	// adds a new frame, and creates point & residual structs.
-	void addActiveFrame(ImageAndExposure* image, int id);
+	void addActiveFrame(ImageAndExposure* image, int id, ColorImageAndExposure* colorimage);
 
+	// adds color frame to pangolin.
+	void addActiveColorFrame(ColorImageAndExposure* image);
+
+	// returns selected keyframe ID from pangolin UI
+	int getselectedkf();
+	
 	// marginalizes a frame. drops / marginalizes points & residuals.
 	void marginalizeFrame(FrameHessian* frame);
 	void blockUntilMappingIsFinished();
