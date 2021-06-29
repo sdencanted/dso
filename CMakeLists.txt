@@ -16,6 +16,7 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 find_package(SuiteParse REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(Boost COMPONENTS system thread) 
+find_package(PCL REQUIRED)
 
 # optional libraries
 find_package(LibZip QUIET)
@@ -64,6 +65,22 @@ include_directories(
   ${EIGEN3_INCLUDE_DIR}
 ) 
 
+if( PCL_FOUND )
+  # [C/C++]>[General]>[Additional Include Directories]
+  include_directories( ${PCL_INCLUDE_DIRS} )
+
+  # [C/C++]>[Preprocessor]>[Preprocessor Definitions]
+  add_definitions( ${PCL_DEFINITIONS} )
+  
+  # For Use Not PreCompiled Features 
+  #add_definitions( -DPCL_NO_PRECOMPILE )
+
+  # [Linker]>[General]>[Additional Library Directories]
+  link_directories( ${PCL_LIBRARY_DIRS} )
+
+  # # [Linker]>[Input]>[Additional Dependencies]
+  # target_link_libraries( ${PROJECT_NAME} ${PCL_LIBRARIES} )
+endif()
 
 # decide if we have pangolin
 if (Pangolin_FOUND)
@@ -126,6 +143,9 @@ if (OpenCV_FOUND AND Pangolin_FOUND)
 	message("--- compiling dso_dataset.")
 	add_executable(dso_dataset ${PROJECT_SOURCE_DIR}/src/main_dso_pangolin.cpp )
     target_link_libraries(dso_dataset dso boost_system cxsparse ${BOOST_THREAD_LIBRARY} ${LIBZIP_LIBRARY} ${Pangolin_LIBRARIES} ${OpenCV_LIBS})
+  
+  # [Linker]>[Input]>[Additional Dependencies]
+  target_link_libraries( dso_dataset ${PCL_LIBRARIES} )
 else()
 	message("--- not building dso_dataset, since either don't have openCV or Pangolin.")
 endif()

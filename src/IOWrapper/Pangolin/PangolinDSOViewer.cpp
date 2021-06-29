@@ -38,6 +38,8 @@
 #include <pangolin/image/image_io.h>
 #include <pangolin/image/pixel_format.h>
 #include <pangolin/image/typed_image.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/point_types.h>
 
 // to detect mouse click and select object
 namespace pangolin
@@ -371,7 +373,7 @@ namespace dso
 			pangolin::Var<bool> settings_playbackPauseButton("ui.Pause", false, false);
 			pangolin::Var<bool> settings_deleteAllMarkings("ui.Delete All Markings", false, false);
 			pangolin::Var<bool> settings_deleteMarkings("ui.Delete Frame Markings", false, false);
-			pangolin::Var<bool> settings_saveMarkings("ui.Save Markings", false, false);
+			pangolin::Var<bool> settings_saveMarkings("ui.Save Markings", false, false);pangolin::Var<bool> settings_exportPointCloud("ui.Export PointCloud", false, false);
 			std::string marking_text = "eg. fault";
 			bool saveimage = false;
 
@@ -658,7 +660,6 @@ namespace dso
 				// 	texResidual.RenderToViewportFlipY();
 				// }
 
-
 				// update parameters
 				this->settings_pointCloudMode = settings_pointCloudMode.Get();
 
@@ -803,13 +804,27 @@ namespace dso
 
 					for (it = markings.begin(); it != markings.end(); it++)
 					{
-						int mins= (int)((it->second.timestamp / 1000000000)/60);
-						int secs = (it->second.timestamp / 1000000000)-mins*60;
+						int mins = (int)((it->second.timestamp / 1000000000) / 60);
+						int secs = (it->second.timestamp / 1000000000) - mins * 60;
 						int msecs = (it->second.timestamp / 1000000) - secs * 1000;
 
 						pangolin::SaveImage(it->second.pointcloud, fmt, str(boost::format("save/pointcloud_%dmin_%ds_%dms") % mins % secs % msecs) + ".png", false);
 						pangolin::SaveImage(it->second.image, fmt, str(boost::format("save/image_%dmin_%ds_%dms") % mins % secs % msecs) + ".png", false);
 					}
+				}
+				if (settings_exportPointCloud.Get())
+				{
+					printf("exporting Point Cloud!\n");
+					settings_exportPointCloud.Reset();
+
+					pcl::PointCloud<pcl::PointXYZRGB> pcloud;
+					for (KeyFrameDisplay *fh : keyframes)
+					{
+						fh->addPC(&pcloud, this->settings_scaledVarTH, this->settings_absVarTH,
+								  this->settings_pointCloudMode, this->settings_minRelBS, this->settings_sparsity);
+					}
+
+					pcl::io::savePCDFileBinary("export.pcd", pcloud);
 				}
 			}
 			printf("QUIT Pangolin thread!\n");
@@ -855,7 +870,6 @@ namespace dso
 
 			needReset = false;
 		}
-
 		void PangolinDSOViewer::drawConstraints()
 		{
 			if (settings_showAllConstraints)

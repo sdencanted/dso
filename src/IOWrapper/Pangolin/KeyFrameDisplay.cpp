@@ -21,9 +21,8 @@
 * along with DSO. If not, see <http://www.gnu.org/licenses/>.
 */
 
-
-
 #include <stdio.h>
+#include <vector>
 #include "util/settings.h"
 
 //#include <GL/glx.h>
@@ -350,6 +349,77 @@ void drawSphere(double r, int lats, int longs) {
     }
 }
 
+void KeyFrameDisplay::addPC(pcl::PointCloud<pcl::PointXYZRGB>* pcloud,float scaledTH, float absTH, int mode, float minBS, int sparsity){
+
+	// if there are no vertices, done!
+	if(numSparsePoints == 0)
+		return;
+
+	my_scaledTH = scaledTH;
+	my_absTH = absTH;
+	my_displayMode = mode;
+	my_minRelBS = minBS;
+	my_sparsifyFactor = sparsity;
+
+	Sophus::Matrix4f m = camToWorld.matrix().cast<float>();
+	Sophus::Vector4f tempVector;
+	tempVector[3]=1;//signifies the vector is a position in space
+	// make data
+	// Vec3f* tmpVertexBuffer = new Vec3f[numSparsePoints*patternNum];
+	// Vec3b* tmpColorBuffer = new Vec3b[numSparsePoints*patternNum];
+	int vertexBufferNumPoints=0;
+
+	for(int i=0;i<numSparsePoints;i++)
+	{
+		if(originalInputSparse[i].idpeth < 0) continue;
+		float depth = 1.0f / originalInputSparse[i].idpeth;
+		float depth4 = depth*depth; depth4*= depth4;
+		float var = (1.0f / (originalInputSparse[i].idepth_hessian+0.01));
+
+		if(var * depth4 > my_scaledTH)
+			continue;
+
+		if(var > my_absTH)
+			continue;
+
+		if(originalInputSparse[i].relObsBaseline < my_minRelBS)
+			continue;
+
+
+		for(int pnt=0;pnt<patternNum;pnt++)
+		{
+			
+			if(my_sparsifyFactor > 1 && rand()%my_sparsifyFactor != 0) continue;
+			int dx = patternP[pnt][0];
+			int dy = patternP[pnt][1];
+			pcl::PointXYZRGB newpoint;
+			// tmpVertexBuffer[vertexBufferNumPoints][0] = ((originalInputSparse[i].u+dx)*fxi + cxi) * depth;
+			// tmpVertexBuffer[vertexBufferNumPoints][1] = ((originalInputSparse[i].v+dy)*fyi + cyi) * depth;
+			// tmpVertexBuffer[vertexBufferNumPoints][2] = depth*(1 + 2*fxi * (rand()/(float)RAND_MAX-0.5f));
+			tempVector[0]=((originalInputSparse[i].u+dx)*fxi + cxi) * depth;
+			tempVector[1]=((originalInputSparse[i].v+dy)*fyi + cyi) * depth;
+			tempVector[2]=depth*(1 + 2*fxi * (rand()/(float)RAND_MAX-0.5f));
+			tempVector=m*tempVector;
+			newpoint.x=tempVector[0];
+			newpoint.y=-tempVector[1];
+			newpoint.z=-tempVector[2];
+			newpoint.r=(uint8_t)(originalInputSparse[i].pixelcolor[pnt][2]);
+			newpoint.g=(uint8_t)(originalInputSparse[i].pixelcolor[pnt][1]);
+			newpoint.b=(uint8_t)(originalInputSparse[i].pixelcolor[pnt][0]);
+			// tmpColorBuffer[vertexBufferNumPoints][0] = (unsigned char)(originalInputSparse[i].pixelcolor[pnt][2]);
+			// tmpColorBuffer[vertexBufferNumPoints][1] = (unsigned char)(originalInputSparse[i].pixelcolor[pnt][1]);
+			// tmpColorBuffer[vertexBufferNumPoints][2] = (unsigned char)(originalInputSparse[i].pixelcolor[pnt][0]);
+			
+			vertexBufferNumPoints++;
+
+
+			assert(vertexBufferNumPoints <= numSparsePoints*patternNum);
+			pcloud->push_back(newpoint);
+		}
+	}
+
+	return;
+}
 
 void KeyFrameDisplay::drawCam(float lineWidth, int* color, float sizeFactor)
 {

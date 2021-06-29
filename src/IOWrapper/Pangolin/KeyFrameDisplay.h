@@ -25,6 +25,9 @@
 #pragma once
 
 #undef Success
+
+#include <pcl/io/pcd_io.h>
+#include <pcl/point_types.h>
 #include <Eigen/Core>
 #include "util/NumType.h"
 #include <pangolin/pangolin.h>
@@ -97,6 +100,8 @@ public:
         return (id < other.id);
     }
 
+	// export pointcloud to PCL format
+	void addPC(pcl::PointCloud<pcl::PointXYZRGB>* pcloud,float scaledTH, float absTH, int mode, float minBS, int sparsity);
 
 private:
 	float fx,fy,cx,cy;
