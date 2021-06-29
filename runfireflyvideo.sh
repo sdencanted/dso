@@ -1,6 +1,7 @@
 if [ -e "$1" ]; then
 
 	echo "Video $1 found!"
+	mkdir save
 	videofolder="${1%.mp4}ffmpeg"
 	if [ -d "$videofolder" ]; then
 		echo "using premade image folder $videofolder"
