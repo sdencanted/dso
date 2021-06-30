@@ -384,7 +384,7 @@ int main(int argc, char **argv)
 	IOWrap::PangolinDSOViewer *viewer = 0;
 	if (!disableAllDisplay)
 	{
-		viewer = new IOWrap::PangolinDSOViewer(wG[0], hG[0], false);
+		viewer = new IOWrap::PangolinDSOViewer(wG[0], hG[0], false, source);
 		fullSystem->outputWrapper.push_back(viewer);
 	}
 

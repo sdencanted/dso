@@ -15,11 +15,11 @@ if [ -e "$1" ]; then
 	echo $fps
 	build/bin/dso_dataset \
 			files="$videofolder" \
-			calib=~/dso/fireflycamera.txt \
+			calib=$(dirname $0)/fireflycamera.txt \
 			preset=0 \
 			mode=1 \
 			fps=$fps
 elif [ ! -e "$1" ]; then
 	echo "Video $1 not found!"
 fi
-read -p "Press any key to resume ..."
+# read -p "Press any key to resume ..."

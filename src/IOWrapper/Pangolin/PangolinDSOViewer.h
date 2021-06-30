@@ -34,6 +34,7 @@
 #include <pangolin/gl/gltext.h>
 
 #include <vector>
+#include <string>
 namespace dso
 {
 
@@ -59,7 +60,7 @@ class PangolinDSOViewer : public Output3DWrapper
 {
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-    PangolinDSOViewer(int w, int h, bool startRunThread=true);
+    PangolinDSOViewer(int w, int h, bool startRunThread=true, std::string source="sample");
 	virtual ~PangolinDSOViewer();
 
 	// returns the selected keyframe if it is the first time the keyframe was requested, else return -1
@@ -104,6 +105,7 @@ private:
 	boost::thread runThread;
 	bool running;
 	int w,h;
+	std::string filename;
 
 
 

@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=View Pointcloud
+Exec=sh -e -c "exec \\"pcl_viewer\\" %u\\"\\"" %k
+Type=Application
+Terminal=true
+Name[en_US]=ViewPointCloud.desktop

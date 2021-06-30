@@ -40,6 +40,10 @@
 #include <pangolin/image/typed_image.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
+#include <iostream>
+#include <chrono>
+#include <ctime>    
+#include <string>    
 
 // to detect mouse click and select object
 namespace pangolin
@@ -196,10 +200,18 @@ namespace dso
 			double timestamp;
 			framedata() : markings(), pointcloud(), image(), timestamp() {}
 		};
-		PangolinDSOViewer::PangolinDSOViewer(int w, int h, bool startRunThread)
+		PangolinDSOViewer::PangolinDSOViewer(int w, int h, bool startRunThread, std::string source)
 		{
+			std::string delimiter = "/";
+			size_t pos = 0;
 			this->w = w;
 			this->h = h;
+			this->filename = source;
+			while ((pos = this->filename.find(delimiter)) != std::string::npos) {
+				// token = this->filename.substr(0, pos);
+				this->filename.erase(0, pos + delimiter.length());
+			}
+			mkdir(str(boost::format("save/%s") % filename.c_str()).c_str(),S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 			running = true;
 			bool selectedkfchange = false;
 			int selectedkf = -1;
@@ -837,8 +849,8 @@ namespace dso
 						int secs = (it->second.timestamp / 1000000000) - mins * 60;
 						int msecs = (it->second.timestamp / 1000000) - secs * 1000;
 
-						pangolin::SaveImage(it->second.pointcloud, fmt, str(boost::format("save/pointcloud_%dmin_%ds_%dms") % mins % secs % msecs) + ".png", false);
-						pangolin::SaveImage(it->second.image, fmt, str(boost::format("save/image_%dmin_%ds_%dms") % mins % secs % msecs) + ".png", false);
+						pangolin::SaveImage(it->second.pointcloud, fmt, str(boost::format("save/%s/pointcloud_%dmin_%ds_%dms") % filename.c_str() % mins % secs % msecs) + ".png", false);
+						pangolin::SaveImage(it->second.image, fmt, str(boost::format("save/%s/image_%dmin_%ds_%dms") % filename.c_str() % mins % secs % msecs) + ".png", false);
 					}
 				}
 				if (settings_exportPointCloud.Get())
@@ -852,8 +864,11 @@ namespace dso
 						fh->addPC(&pcloud, this->settings_scaledVarTH, this->settings_absVarTH,
 								  this->settings_pointCloudMode, this->settings_minRelBS, this->settings_sparsity);
 					}
-
-					pcl::io::savePCDFileBinary("export.pcd", pcloud);
+					std::time_t end_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+					std::string rawstr=str(boost::format("save/%s/export%s.pcd") % filename.c_str()%std::ctime(&end_time));
+					std::replace(rawstr.begin(), rawstr.end(), ':', '_');
+					std::replace(rawstr.begin(), rawstr.end(), ' ', '_');
+					pcl::io::savePCDFileBinary(rawstr.c_str(), pcloud);
 				}
 			}
 			printf("QUIT Pangolin thread!\n");
