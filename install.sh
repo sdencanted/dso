@@ -12,8 +12,6 @@ mkdir build
 cd build
 cmake ..
 cmake --build .
-cd ~
-# git clone https://github.com/sdencanted/dso
 
-cd dso
+cd $(dirname $0)
 ./make.sh
