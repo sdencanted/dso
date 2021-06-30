@@ -35,7 +35,7 @@
 
 #include <sstream>
 #include <fstream>
-
+#include <vector>
 namespace dso
 {
 class CalibHessian;
@@ -99,7 +99,8 @@ public:
     {
         return (id < other.id);
     }
-
+	void addMarking(int x1,int x2, int y1, int y2);
+	void removeMarking();
 	// export pointcloud to PCL format
 	void addPC(pcl::PointCloud<pcl::PointXYZRGB>* pcloud,float scaledTH, float absTH, int mode, float minBS, int sparsity);
 
@@ -118,7 +119,7 @@ private:
 	int numSparsePoints;
 	int numSparseBufferSize;
     InputPointSparse<MAX_RES_PER_POINT>* originalInputSparse;
-
+	std::vector<std::vector<int>> boxes;
 
 	bool bufferValid;
 	int numGLBufferPoints;

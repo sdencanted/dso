@@ -416,18 +416,22 @@ namespace dso
 						if (returnId == -1)
 						{ //nothing
 							printf("clicked on nothing!\n");
+							playback_mode = PAUSE;
 							if (selectedkf != -1)
 							{
 								selectedkf = -1;
+								selectedkf_index=-1;
 								selectedkfchange = true;
 							}
 						}
 						else if (returnId == 16777214)
 						{ //current frame
 							printf("clicked on current frame!\n");
+							playback_mode = PAUSE;
 							if (selectedkf != -1)
 							{
 								selectedkf = -1;
+								selectedkf_index=-1;
 								selectedkfchange = true;
 							}
 						}
@@ -458,6 +462,7 @@ namespace dso
 									}
 								}
 							}
+							playback_mode = PAUSE;
 							printf("clicked on ID %d with array position %d\n", returnId, selectedkf_index);
 						}
 						lk3d.unlock();
@@ -501,7 +506,7 @@ namespace dso
 							}
 						}
 					}
-					if (this->settings_showCurrentCamera)
+					if (this->settings_showCurrentCamera && keyframes.size()>1)
 					{
 						currentCam->drawCam(2, 0, 0.2);
 					}
@@ -558,6 +563,22 @@ namespace dso
 					glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 					if (checkfirst)
 					{
+						if(selectedkf==-1){
+							if(keyframes.size()>1){
+								selectedkf=keyframes.back()->id;
+								selectedkfchange=true;
+
+								for (int i =  keyframes.size()-1; i >0 ; --i)
+								{
+									if (keyframes[i]->id == selectedkf)
+									{
+										selectedkf_index = i;
+										break;
+									}
+								}
+							}
+						}
+						playback_mode = PAUSE;
 						checkfirst = false;
 						firsthorizontal = std::max(-1.0, std::min(1.0, (float)(firstx - d_video_player.GetBounds().l) / (float)(0.5 * d_video_player.GetBounds().w) - 1.0));
 						firstvertical = std::max(-1.0, std::min(1.0, (float)((firsty)-d_video_player.GetBounds().b) / (float)(0.5 * d_video_player.GetBounds().h) - 1.0));
@@ -592,6 +613,7 @@ namespace dso
 								if (fh->id == selectedkf)
 								{
 									markings[selectedkf].timestamp = fh->timestamp;
+									fh->addMarking((int)((firsthorizontal+1)*wG[0]/2),(int)((secondhorizontal+1)*wG[0]/2),(int)((-firstvertical+1)*hG[0]/2),(int)((-secondvertical+1)*hG[0]/2));
 									break;
 								}
 							}
@@ -630,8 +652,11 @@ namespace dso
 
 					if (selectedkf != -1)
 					{
+						int mins = (int)((keyframes[selectedkf_index]->timestamp / 1000000000) / 60);
+						int secs = (keyframes[selectedkf_index]->timestamp / 1000000000) - mins * 60;
+						int msecs = (keyframes[selectedkf_index]->timestamp / 1000000) - secs * 1000;
 						glColor3ub(255, 255, 0);
-						mybigfont.Text("Video at selected position").DrawWindow(d_video_player.GetBounds().l, d_video_player.GetBounds().t());
+						mybigfont.Text(str(boost::format("Video at selected position %d min %ds %dms") % mins % secs % msecs)).DrawWindow(d_video_player.GetBounds().l, d_video_player.GetBounds().t());
 						glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 						texVideoPlayer.RenderToViewportFlipY();
 					}
@@ -642,6 +667,7 @@ namespace dso
 						glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 						texVideo.RenderToViewportFlipY();
 					}
+
 				}
 
 				if (setting_render_displayDepth)
@@ -724,12 +750,15 @@ namespace dso
 					secondhorizontal = 0;
 					firstvertical = 0;
 					secondvertical = 0;
+					for(auto &kf:keyframes)
+						kf->removeMarking();
 				}
 				if (settings_deleteMarkings.Get())
 				{
 					printf("deleting markings from the frame!\n");
 					settings_deleteMarkings.Reset();
 					markings[selectedkf].markings.clear();
+					keyframes[selectedkf_index]->removeMarking();
 					markings.erase(selectedkf);
 					firsthorizontal = 0;
 					secondhorizontal = 0;
@@ -743,7 +772,7 @@ namespace dso
 					switch (playback_mode)
 					{
 					case FORWARD:
-						if (selectedkf_index < keyframes.size() - 1)
+						if (selectedkf_index < keyframes.size() - 1 && selectedkf_index!=-1)
 						{
 							if (frameseconds + 1 / settings_playbackFps.Get() < clock() / (float)(CLOCKS_PER_SEC))
 							{
@@ -758,8 +787,8 @@ namespace dso
 								secondvertical = 0;
 							}
 						}
-						else
-							playback_mode = PAUSE;
+						// else
+							// playback_mode = PAUSE;
 						// code block
 						break;
 					case REVERSE:

@@ -1,0 +1,5 @@
+[Desktop Entry]
+Name=DSO
+Exec=sh -e -c "exec \\"\\$(dirname \\"\\$0\\")/runfireflyvideo.sh\\" %u\\"\\"" %k
+Type=Application
+Terminal=true

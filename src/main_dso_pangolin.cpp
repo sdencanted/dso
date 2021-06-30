@@ -558,7 +558,7 @@ int main(int argc, char **argv)
 										 fullSystem->addRequestedFrame(kimg, kfid);
 										 delete kimg;
 									 }
-									 usleep((1 / 30) * 1000 * 1000);
+									 usleep((1 / 120) * 1000 * 1000);
 								 }
 							 });
 

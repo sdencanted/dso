@@ -1,5 +1,6 @@
+#!/usr/bin/env bash
+cd $(dirname $0)
 if [ -e "$1" ]; then
-
 	echo "Video $1 found!"
 	mkdir save
 	videofolder="${1%.mp4}ffmpeg"
@@ -21,3 +22,4 @@ if [ -e "$1" ]; then
 elif [ ! -e "$1" ]; then
 	echo "Video $1 not found!"
 fi
+read -p "Press any key to resume ..."

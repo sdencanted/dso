@@ -205,10 +205,10 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
 		return false;
 
 	// make data
-	Vec3f* tmpVertexBuffer = new Vec3f[numSparsePoints*patternNum];
-	Vec3b* tmpColorBuffer = new Vec3b[numSparsePoints*patternNum];
+	Vec3f* tmpVertexBuffer = new Vec3f[numSparsePoints*patternNum*2];
+	Vec3b* tmpColorBuffer = new Vec3b[numSparsePoints*patternNum*2];
 	int vertexBufferNumPoints=0;
-
+	bool drawMarking=false;
 	for(int i=0;i<numSparsePoints;i++)
 	{
 		/* display modes:
@@ -216,8 +216,16 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
 		 * my_displayMode==1 - normal points
 		 * my_displayMode==2 - active only
 		 * my_displayMode==3 - nothing
-		 */
-
+		 */			
+		
+		drawMarking=false;
+		for(auto box: boxes){
+			if (box[0]-wG[0]*0.05<=(int)originalInputSparse[i].u && box[1]+wG[0]*0.05>=(int)originalInputSparse[i].u && box[2]-hG[0]*0.05<(int)originalInputSparse[i].v &&box[3]+hG[0]*0.05>=(int)originalInputSparse[i].v ){
+				drawMarking=true;
+				printf("a\n\n\n\n\n\n\n\na");
+				break;
+			}
+		}
 		if(my_displayMode==1 && originalInputSparse[i].status != 1 && originalInputSparse[i].status!= 2) continue;
 		if(my_displayMode==2 && originalInputSparse[i].status != 1) continue;
 		if(my_displayMode>2) continue;
@@ -249,53 +257,25 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
 			tmpVertexBuffer[vertexBufferNumPoints][0] = ((originalInputSparse[i].u+dx)*fxi + cxi) * depth;
 			tmpVertexBuffer[vertexBufferNumPoints][1] = ((originalInputSparse[i].v+dy)*fyi + cyi) * depth;
 			tmpVertexBuffer[vertexBufferNumPoints][2] = depth*(1 + 2*fxi * (rand()/(float)RAND_MAX-0.5f));
+			tmpColorBuffer[vertexBufferNumPoints][0] = (unsigned char)(originalInputSparse[i].pixelcolor[pnt][2]);
+			tmpColorBuffer[vertexBufferNumPoints][1] = (unsigned char)(originalInputSparse[i].pixelcolor[pnt][1]);
+			tmpColorBuffer[vertexBufferNumPoints][2] = (unsigned char)(originalInputSparse[i].pixelcolor[pnt][0]);
+			if(drawMarking){
+				tmpVertexBuffer[vertexBufferNumPoints+1][0] = ((originalInputSparse[i].u+dx)*fxi + cxi) * depth;
+				tmpVertexBuffer[vertexBufferNumPoints+1][1] = ((originalInputSparse[i].v+dy)*fyi + cyi) * depth;
+				tmpVertexBuffer[vertexBufferNumPoints+1][2] = depth*(1 + 2*fxi * (rand()/(float)RAND_MAX-0.5f)) - 0.01;
 
-
-
-			if(my_displayMode==0)
-			{
-				if(originalInputSparse[i].status==0)
-				{
-					tmpColorBuffer[vertexBufferNumPoints][0] = 0;
-					tmpColorBuffer[vertexBufferNumPoints][1] = 255;
-					tmpColorBuffer[vertexBufferNumPoints][2] = 255;
-				}
-				else if(originalInputSparse[i].status==1)
-				{
-					tmpColorBuffer[vertexBufferNumPoints][0] = 0;
-					tmpColorBuffer[vertexBufferNumPoints][1] = 255;
-					tmpColorBuffer[vertexBufferNumPoints][2] = 0;
-				}
-				else if(originalInputSparse[i].status==2)
-				{
-					tmpColorBuffer[vertexBufferNumPoints][0] = 0;
-					tmpColorBuffer[vertexBufferNumPoints][1] = 0;
-					tmpColorBuffer[vertexBufferNumPoints][2] = 255;
-				}
-				else if(originalInputSparse[i].status==3)
-				{
-					tmpColorBuffer[vertexBufferNumPoints][0] = 255;
-					tmpColorBuffer[vertexBufferNumPoints][1] = 0;
-					tmpColorBuffer[vertexBufferNumPoints][2] = 0;
-				}
-				else
-				{
-					tmpColorBuffer[vertexBufferNumPoints][0] = 255;
-					tmpColorBuffer[vertexBufferNumPoints][1] = 255;
-					tmpColorBuffer[vertexBufferNumPoints][2] = 255;
-				}
-
+				tmpColorBuffer[vertexBufferNumPoints+1][0] = (unsigned char)255;
+				tmpColorBuffer[vertexBufferNumPoints+1][1] = (unsigned char)0;
+				tmpColorBuffer[vertexBufferNumPoints+1][2] = (unsigned char)0;
 			}
-			else
-			{
-				tmpColorBuffer[vertexBufferNumPoints][0] = (unsigned char)(originalInputSparse[i].pixelcolor[pnt][2]);
-				tmpColorBuffer[vertexBufferNumPoints][1] = (unsigned char)(originalInputSparse[i].pixelcolor[pnt][1]);
-				tmpColorBuffer[vertexBufferNumPoints][2] = (unsigned char)(originalInputSparse[i].pixelcolor[pnt][0]);
-			}
+
+			
 			vertexBufferNumPoints++;
+			if(drawMarking)
+				vertexBufferNumPoints++;
 
-
-			assert(vertexBufferNumPoints <= numSparsePoints*patternNum);
+			assert(vertexBufferNumPoints <= numSparsePoints*patternNum*2);
 		}
 	}
 
@@ -348,7 +328,36 @@ void drawSphere(double r, int lats, int longs) {
         glEnd();
     }
 }
+void KeyFrameDisplay::removeMarking(){
+	if (boxes.size()>0){
+		boxes.clear();
+		needRefresh=true;
+		refreshPC(true, my_scaledTH,my_absTH, my_displayMode, my_minRelBS, my_sparsifyFactor);
+	}
+}
+void KeyFrameDisplay::addMarking(int x1,int x2, int y1, int y2){
+	std::vector<int> box;
+	if(x1<x2){
+		box.push_back(x1);
+		box.push_back(x2);
+	}
+	else{
+		box.push_back(x2);
+		box.push_back(x1);
+	}
+	if(y1<y2){
+		box.push_back(y1);
+		box.push_back(y2);
+	}
+	else{
+		box.push_back(y2);
+		box.push_back(y1);
+	}
+	boxes.push_back(box);
+	needRefresh=true;
+	refreshPC(true, my_scaledTH,my_absTH, my_displayMode, my_minRelBS, my_sparsifyFactor);
 
+}
 void KeyFrameDisplay::addPC(pcl::PointCloud<pcl::PointXYZRGB>* pcloud,float scaledTH, float absTH, int mode, float minBS, int sparsity){
 
 	// if there are no vertices, done!
@@ -368,9 +377,18 @@ void KeyFrameDisplay::addPC(pcl::PointCloud<pcl::PointXYZRGB>* pcloud,float scal
 	// Vec3f* tmpVertexBuffer = new Vec3f[numSparsePoints*patternNum];
 	// Vec3b* tmpColorBuffer = new Vec3b[numSparsePoints*patternNum];
 	int vertexBufferNumPoints=0;
-
+	bool drawMarking=false;
 	for(int i=0;i<numSparsePoints;i++)
 	{
+
+		drawMarking=false;
+		for(auto box: boxes){
+			if (box[0]-wG[0]*0.05<=(int)originalInputSparse[i].u && box[1]+wG[0]*0.05>=(int)originalInputSparse[i].u && box[2]-hG[0]*0.05<(int)originalInputSparse[i].v &&box[3]+hG[0]*0.05>=(int)originalInputSparse[i].v ){
+				drawMarking=true;
+				// printf("a\n\n\n\n\n\n\n\na");
+				break;
+			}
+		}
 		if(originalInputSparse[i].idpeth < 0) continue;
 		float depth = 1.0f / originalInputSparse[i].idpeth;
 		float depth4 = depth*depth; depth4*= depth4;
@@ -413,8 +431,34 @@ void KeyFrameDisplay::addPC(pcl::PointCloud<pcl::PointXYZRGB>* pcloud,float scal
 			vertexBufferNumPoints++;
 
 
-			assert(vertexBufferNumPoints <= numSparsePoints*patternNum);
+			assert(vertexBufferNumPoints <= numSparsePoints*patternNum*2);
 			pcloud->push_back(newpoint);
+			if(drawMarking){
+
+				pcl::PointXYZRGB newpoint2;
+				// tmpVertexBuffer[vertexBufferNumPoints][0] = ((originalInputSparse[i].u+dx)*fxi + cxi) * depth;
+				// tmpVertexBuffer[vertexBufferNumPoints][1] = ((originalInputSparse[i].v+dy)*fyi + cyi) * depth;
+				// tmpVertexBuffer[vertexBufferNumPoints][2] = depth*(1 + 2*fxi * (rand()/(float)RAND_MAX-0.5f));
+				tempVector[0]=((originalInputSparse[i].u+dx)*fxi + cxi) * depth;
+				tempVector[1]=((originalInputSparse[i].v+dy)*fyi + cyi) * depth;
+				tempVector[2]=depth*(1 + 2*fxi * (rand()/(float)RAND_MAX-0.5f))-0.01;
+				tempVector=m*tempVector;
+				newpoint2.x=tempVector[0];
+				newpoint2.y=-tempVector[1];
+				newpoint2.z=-tempVector[2];
+				newpoint2.r=(uint8_t)255;
+				newpoint2.g=(uint8_t)0;
+				newpoint2.b=(uint8_t)0;
+				// tmpColorBuffer[vertexBufferNumPoints][0] = (unsigned char)(originalInputSparse[i].pixelcolor[pnt][2]);
+				// tmpColorBuffer[vertexBufferNumPoints][1] = (unsigned char)(originalInputSparse[i].pixelcolor[pnt][1]);
+				// tmpColorBuffer[vertexBufferNumPoints][2] = (unsigned char)(originalInputSparse[i].pixelcolor[pnt][0]);
+				
+				vertexBufferNumPoints++;
+
+
+				assert(vertexBufferNumPoints <= numSparsePoints*patternNum*2);
+				pcloud->push_back(newpoint2);
+			}
 		}
 	}
 
@@ -487,7 +531,7 @@ void KeyFrameDisplay::drawPC(float pointSize,int* color)
 
 
 		colorBuffer.Bind();
-		if(color == 0)
+		if(color == 0 || true)
 		{
 			// glColor3ub(255,255,255);
 			glColorPointer(colorBuffer.count_per_element, colorBuffer.datatype, 0, 0);
