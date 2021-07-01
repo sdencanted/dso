@@ -13,7 +13,7 @@ if [ -e "$1" ]; then
 	fi
 	fps=`ffmpeg -i "$1" 2>&1 | sed -n "s/.*, \(.*\) fp.*/\1/p"`
 	echo $fps
-	build/bin/dso_dataset \
+	../build/bin/dso_dataset \
 			files="$videofolder" \
 			calib=$(dirname $0)/fireflycamera.txt \
 			preset=0 \

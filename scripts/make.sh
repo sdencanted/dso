@@ -13,7 +13,7 @@ if [ $raminkb -lt 8000000 ]; then
 	cd ..
 fi
 
-
+cd ..
 mkdir build
 cd build
 cmake ..
@@ -23,6 +23,7 @@ if [ $raminkb -lt 8000000 ]; then
 	#After the install is done
 	echo "deactivating swap..."
 	cd ..
+	cd scripts
 	cd swap
 	sudo swapoff swapfile
 	echo "removing swap..."

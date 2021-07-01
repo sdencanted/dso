@@ -1,5 +1,5 @@
 [Desktop Entry]
 Name=install
 Type=Application
-Exec=sh -e -c "exec \\"\\$(dirname \\"\\$0\\")/install.sh\\"" %k
+Exec=sh -e -c "exec \\"\\$(dirname \\"\\$0\\")/scripts/install.sh\\"" %k
 Terminal=true

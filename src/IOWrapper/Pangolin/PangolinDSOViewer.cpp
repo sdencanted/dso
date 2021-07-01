@@ -388,6 +388,7 @@ namespace dso
 			pangolin::Var<bool> settings_saveMarkings("ui.Save Markings", false, false);pangolin::Var<bool> settings_exportPointCloud("ui.Export PointCloud", false, false);
 			std::string marking_text = "eg. fault";
 			bool saveimage = false;
+			bool savepcimage = false;
 
 			// Default hooks for exiting (Esc) and fullscreen (tab).
 			while (!pangolin::ShouldQuit() && running)
@@ -830,11 +831,15 @@ namespace dso
 				}
 				if (needReset)
 					reset_internal();
+				if(savepcimage){
+					savepcimage=false;
+					markings[selectedkf].pointcloud = HoldFramebuffer(Visualization3D_display.GetBounds());
+				}
 				if (saveimage)
 				{
 					saveimage = false;
+					savepcimage=true;
 					markings[selectedkf].image = HoldFramebuffer(d_video_player.GetBounds());
-					markings[selectedkf].pointcloud = HoldFramebuffer(Visualization3D_display.GetBounds());
 				}
 				if (settings_saveMarkings.Get())
 				{
