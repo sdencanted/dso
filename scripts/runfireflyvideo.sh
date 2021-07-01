@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-cd $(dirname $0)
+abspath=$(dirname $(readlink -f "$0"))
+cd $abspath
 if [ -e "$1" ]; then
 	echo "Video $1 found!"
 	mkdir save
@@ -13,9 +14,10 @@ if [ -e "$1" ]; then
 	fi
 	fps=`ffmpeg -i "$1" 2>&1 | sed -n "s/.*, \(.*\) fp.*/\1/p"`
 	echo $fps
+	echo $abspath/fireflycamera.txt
 	../build/bin/dso_dataset \
 			files="$videofolder" \
-			calib=$(dirname $0)/fireflycamera.txt \
+			calib=$abspath/fireflycamera.txt \
 			preset=0 \
 			mode=1 \
 			fps=$fps

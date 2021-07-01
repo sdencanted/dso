@@ -667,7 +667,7 @@ namespace dso
 					{
 						int mins = (int)((keyframes[selectedkf_index]->timestamp / 1000000000) / 60);
 						int secs = (keyframes[selectedkf_index]->timestamp / 1000000000) - mins * 60;
-						int msecs = (keyframes[selectedkf_index]->timestamp / 1000000) - secs * 1000;
+						int msecs = (keyframes[selectedkf_index]->timestamp / 1000000) - (secs+mins*60) * 1000;
 						glColor3ub(255, 255, 0);
 						mybigfont.Text(str(boost::format("Video at selected position %d min %ds %dms") % mins % secs % msecs)).DrawWindow(d_video_player.GetBounds().l, d_video_player.GetBounds().t());
 						glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
@@ -768,15 +768,20 @@ namespace dso
 				}
 				if (settings_deleteMarkings.Get())
 				{
-					printf("deleting markings from the frame!\n");
-					settings_deleteMarkings.Reset();
-					markings[selectedkf].markings.clear();
-					keyframes[selectedkf_index]->removeMarking();
-					markings.erase(selectedkf);
-					firsthorizontal = 0;
-					secondhorizontal = 0;
-					firstvertical = 0;
-					secondvertical = 0;
+					if(selectedkf!=-1){
+						printf("deleting markings from the frame!\n");
+						settings_deleteMarkings.Reset();
+						markings[selectedkf].markings.clear();
+						keyframes[selectedkf_index]->removeMarking();
+						markings.erase(selectedkf);
+						firsthorizontal = 0;
+						secondhorizontal = 0;
+						firstvertical = 0;
+						secondvertical = 0;
+					}
+					else{
+						settings_deleteMarkings.Reset();
+					}
 				}
 				// Swap frames and Process Events
 				pangolin::FinishFrame();
@@ -852,7 +857,7 @@ namespace dso
 					{
 						int mins = (int)((it->second.timestamp / 1000000000) / 60);
 						int secs = (it->second.timestamp / 1000000000) - mins * 60;
-						int msecs = (it->second.timestamp / 1000000) - secs * 1000;
+						int msecs = (it->second.timestamp / 1000000) - (secs+mins*60) * 1000;
 
 						pangolin::SaveImage(it->second.pointcloud, fmt, str(boost::format("save/%s/pointcloud_%dmin_%ds_%dms") % filename.c_str() % mins % secs % msecs) + ".png", false);
 						pangolin::SaveImage(it->second.image, fmt, str(boost::format("save/%s/image_%dmin_%ds_%dms") % filename.c_str() % mins % secs % msecs) + ".png", false);
