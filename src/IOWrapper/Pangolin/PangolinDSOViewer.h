@@ -98,10 +98,15 @@ public:
     virtual void reset() override;
 private:
 	enum PlaybackMode { PAUSE, FORWARD, REVERSE };
+	enum CompassMode { ANGLE, POSITION,NOTHING };
+	enum Direction { UP, LEFT,DOWN,RIGHT };
 	bool needReset;
 	void reset_internal();
 	void drawConstraints();
-
+	void drawCircle(float cx, float cy, float cz, float r, int num_segments);
+	void drawCompass(float cx, float cy, float cz, float r, int angle, int num_segments, int pointerScale);
+	void angleglVertex3f(float cx,float dx, float cy, float cz, float dz, float theta);
+	void drawAbsSphere(float ax, float ay, float az, double r, int lats, int longs);
 	boost::thread runThread;
 	bool running;
 	int w,h;

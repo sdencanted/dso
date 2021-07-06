@@ -630,7 +630,7 @@ ColorImageAndExposure* Undistort::colorundistort(const MinimalImage<T>* image_ra
 	}
 	else
 	{
-		memcpy(result->image, photometricUndist->coloroutput->image, sizeof(float)*w*h);
+		memcpy(result->image, photometricUndist->coloroutput->image, sizeof(Vec3b)*w*h);
 	}
 
 	applyBlurNoise(result->image);

@@ -87,13 +87,18 @@ public:
 	// copies & filters internal data to GL buffer for rendering. if nothing to do: does nothing.
 	bool refreshPC(bool canRefresh, float scaledTH, float absTH, int mode, float minBS, int sparsity);
 
+	// get heading of frame
+	int  getCompass(float offsetAngle);
+
 	// renders cam & pointcloud.
 	void drawCam(float lineWidth = 1, int* color = 0, float sizeFactor=1);
 	void drawPC(float pointSize,int* color=0);
+	void drawIndexedPC(float pointSize);
 
 	int id;
 	bool active;
 	SE3 camToWorld;
+	SE3 worldToCam;
 
     inline bool operator < (const KeyFrameDisplay& other) const
     {
@@ -103,7 +108,8 @@ public:
 	void removeMarking();
 	// export pointcloud to PCL format
 	void addPC(pcl::PointCloud<pcl::PointXYZRGB>* pcloud,float scaledTH, float absTH, int mode, float minBS, int sparsity);
-
+	Vec3f getPCbyMatrix( GLdouble cursor_pos[3]);
+	Vec3f getPCfromID(int id);
 private:
 	float fx,fy,cx,cy;
 	float fxi,fyi,cxi,cyi;
@@ -126,6 +132,8 @@ private:
 	int numGLBufferGoodPoints;
 	pangolin::GlBuffer vertexBuffer;
 	pangolin::GlBuffer colorBuffer;
+	Vec3f *tmpVertexBufferIndex;
+	int numPoints;
 };
 
 }
