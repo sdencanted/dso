@@ -20,6 +20,7 @@ if [ -e "$1" ]; then
 			calib=$abspath/fireflycamera.txt \
 			preset=0 \
 			mode=1 \
+			quiet=1 \
 			fps=$fps
 elif [ ! -e "$1" ]; then
 	echo "Video $1 not found!"
