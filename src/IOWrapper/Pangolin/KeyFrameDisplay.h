@@ -104,13 +104,16 @@ public:
     {
         return (id < other.id);
     }
-	void addMarking(int x1,int x2, int y1, int y2);
+	void addMarking(int x1,int x2, int y1, int y2,float scaledTH, float absTH, int mode, float minBS, int sparsity);
+	std::vector<float> getMarkingSize(int x1, int x2, int y1, int y2);
 	void removeMarking();
 	// export pointcloud to PCL format
 	void addPC(pcl::PointCloud<pcl::PointXYZRGB>* pcloud,float scaledTH, float absTH, int mode, float minBS, int sparsity);
 	Vec3f getPCbyMatrix( GLdouble cursor_pos[3]);
 	Vec3f getPCfromID(int id);
+	std::vector<float> getBounds();
 private:
+	bool writingMutex;
 	float fx,fy,cx,cy;
 	float fxi,fyi,cxi,cyi;
 	int width, height;
@@ -126,6 +129,7 @@ private:
 	int numSparseBufferSize;
     InputPointSparse<MAX_RES_PER_POINT>* originalInputSparse;
 	std::vector<std::vector<int>> boxes;
+	std::vector<std::vector<float>> boxDim;
 
 	bool bufferValid;
 	int numGLBufferPoints;
@@ -134,6 +138,7 @@ private:
 	pangolin::GlBuffer colorBuffer;
 	Vec3f *tmpVertexBufferIndex;
 	int numPoints;
+	float maxX,minX,maxY,minY,maxZ,minZ;
 };
 
 }

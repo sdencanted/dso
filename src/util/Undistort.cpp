@@ -958,7 +958,7 @@ void Undistort::makeOptimalK_crop()
 			exit(1);
 		}
 	}
-
+	h=w*(maxY-minY)/(maxX-minX);
 	K(0,0) = ((float)w-1.0f)/(maxX-minX);
 	K(1,1) = ((float)h-1.0f)/(maxY-minY);
 	K(0,2) = -minX*K(0,0);
@@ -1123,8 +1123,9 @@ void Undistort::readFromFile(const char* configFileName, int nPars, std::string 
     remapX = new float[w*h];
     remapY = new float[w*h];
 
-	if(outputCalibration[0] == -1)
+	if(outputCalibration[0] == -1){
 		makeOptimalK_crop();
+	}
 	else if(outputCalibration[0] == -2)
 		makeOptimalK_full();
 	else if(outputCalibration[0] == -3)

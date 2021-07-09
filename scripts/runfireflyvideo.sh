@@ -3,7 +3,10 @@ abspath=$(dirname $(readlink -f "$0"))
 cd $abspath
 if [ -e "$1" ]; then
 	echo "Video $1 found!"
+	cd ..
 	mkdir save
+	cd $abspath
+
 	videofolder="${1%.mp4}ffmpeg"
 	if [ -d "$videofolder" ]; then
 		echo "using premade image folder $videofolder"

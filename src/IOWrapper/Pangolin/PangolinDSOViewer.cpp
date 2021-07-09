@@ -452,15 +452,29 @@ namespace dso
 			float newdz = mag * sinf(theta3);
 			glVertex3f(cx + newdx, cy, cz + newdz);
 		}
-		void PangolinDSOViewer::drawCompass(float cx, float cy, float cz, float r, int angle, int num_segments, int pointerScale)
+		void PangolinDSOViewer::drawCompass(float cx, float cy, float cz, float r, int angle, int num_segments, int pointerScale, bool ringSelected,bool centreSelected)
 		{
+			if(centreSelected)
+				glColor3ub(255, 200, 200);
+			else
+				glColor3ub(255, 0, 0);
+			drawAbsSphere(cx, cy, cz, r / 10, 10, 10);
 			float theta = angle * 2 * 3.1415926 / (float)360;
+
+			if(ringSelected)
+				glColor3ub(255, 200, 200);
+			else
+				glColor3ub(255, 0, 0);
+			glLineWidth(10);
 			drawCircle(cx, cy, cz, r, num_segments);
+			glLineWidth(1);
 			float c = cosf(theta); //precalculate the sine and cosine
 			float s = sinf(theta);
 			glBegin(GL_LINES);
 			float cxNorth = cx + r * 0.8 * s;
 			float czNorth = cz + r * 0.8 * c;
+
+			glColor3ub(255, 0, 0);
 			//draw north
 			angleglVertex3f(cxNorth, -r * 0.1, cy, czNorth, r * 0.1, theta);
 			angleglVertex3f(cxNorth, r * 0.1, cy, czNorth, -r * 0.1, theta);
@@ -585,7 +599,7 @@ namespace dso
 			int rx = 0;
 			int ry = 0;
 			float compassPosX = 0;
-			float compassPosY = 0;
+			float compassPosY = -2;
 			float xOffset = 0;
 			float yOffset = 0;
 			float initialX = 0;
@@ -596,8 +610,8 @@ namespace dso
 														  .SetHandler(new pangolin::MyHandler3D(Visualization3D_camera, checkObject, rx, ry, checkCompass, compassFirstClick));
 
 			// 3 images + player
-			pangolin::View &d_kfDepth = pangolin::Display("imgKFDepth")
-											.SetAspect(w / (float)h);
+			// pangolin::View &d_kfDepth = pangolin::Display("imgKFDepth")
+			// 								.SetAspect(w / (float)h);
 
 			pangolin::View &d_video = pangolin::Display("imgVideo")
 										  .SetAspect(w / (float)h);
@@ -608,9 +622,9 @@ namespace dso
 			pangolin::View &d_video_player = pangolin::Display("imgVideoPlayer")
 												 .SetAspect(w / (float)h)
 												 .SetHandler(new pangolin::MyHandler2D(checkfirst, firstx, firsty, checksecond, secondx, secondy, releasesecond));
-			pangolin::View &d_video_player_text = pangolin::Display("imgVideoPlayer")
-													  .SetAspect(w / (float)h)
-													  .SetHandler(new pangolin::MyHandler2D(checkfirst, firstx, firsty, checksecond, secondx, secondy, releasesecond));
+			// pangolin::View &d_video_player_text = pangolin::Display("imgVideoPlayer")
+			// 										  .SetAspect(w / (float)h)
+			// 										  .SetHandler(new pangolin::MyHandler2D(checkfirst, firstx, firsty, checksecond, secondx, secondy, releasesecond));
 
 			pangolin::GlTexture texKFDepth(w, h, GL_RGB, false, 0, GL_RGB, GL_UNSIGNED_BYTE);
 			pangolin::GlTexture texVideo(w, h, GL_RGB, false, 0, GL_RGB, GL_UNSIGNED_BYTE);
@@ -619,19 +633,20 @@ namespace dso
 			pangolin::CreateDisplay()
 				.SetBounds(0.0, 0.54, 0.5, 1)
 				.AddDisplay(d_video_player);
-			pangolin::CreateDisplay()
-				.SetBounds(0.0, 0.54, 0.5, 1)
-				.AddDisplay(d_video_player_text);
+			// pangolin::CreateDisplay()
+			// 	.SetBounds(0.0, 0.54, 0.5, 1)
+			// 	.AddDisplay(d_video_player_text);
 			pangolin::CreateDisplay()
 				.SetBounds(0.54, 1, 0.5, 1)
 				.SetLayout(pangolin::LayoutEqual)
-				.AddDisplay(d_kfDepth)
 				.AddDisplay(d_video);
+				// .AddDisplay(d_kfDepth)
 			//    .AddDisplay(d_residual);
 
 			// parameter reconfigure gui
-			pangolin::CreatePanel("ui").SetBounds(0.0, 1.0, 0.0, pangolin::Attach::Pix(UI_WIDTH));
+			pangolin::CreatePanel("ui").SetBounds(0, 1.0, 0.0, pangolin::Attach::Pix(UI_WIDTH));
 
+			pangolin::Var<bool> settings_adv("ui.Advanced Settings",false,true);
 			pangolin::Var<double> settings_trackFps("ui.Track fps", 0, 0, 0, false);
 			pangolin::Var<double> settings_mapFps("ui.KF fps", 0, 0, 0, false);
 			pangolin::Var<double> settings_playbackFps("ui.Playback FPS", setting_kfGlobalWeight, 0.1, 30, false);
@@ -647,36 +662,41 @@ namespace dso
 
 			pangolin::Var<bool> settings_getPointPosition("ui.Measure", false, false);
 			pangolin::Var<bool> settings_getDimensions("ui.Total Size", false, false);
-			pangolin::Var<int> settings_pointCloudMode("ui.PC_mode", 1, 1, 4, false);
 
-			pangolin::Var<bool> settings_showKFCameras("ui.KFCam", true, true);
-			pangolin::Var<bool> settings_showCurrentCamera("ui.CurrCam", true, true);
-			pangolin::Var<bool> settings_showTrajectory("ui.Trajectory", true, true);
-			pangolin::Var<bool> settings_showFullTrajectory("ui.FullTrajectory", false, true);
-			pangolin::Var<bool> settings_showActiveConstraints("ui.ActiveConst", true, true);
-			pangolin::Var<bool> settings_showAllConstraints("ui.AllConst", false, true);
+			// pangolin::Var<bool> settings_showAdv("ui.Advanced settings", true, true);
+			pangolin::CreatePanel("sub_panel").SetBounds(0.0, 0.5, 0, pangolin::Attach::Pix(UI_WIDTH));
+			pangolin::Display("sub_panel").Show(false);
 
-			pangolin::Var<bool> settings_show3D("ui.show3D", true, true);
-			pangolin::Var<bool> settings_showLiveDepth("ui.showDepth", true, true);
-			pangolin::Var<bool> settings_showLiveVideo("ui.showVideo", true, true);
-			pangolin::Var<bool> settings_showLiveResidual("ui.showResidual", false, true);
+			pangolin::Var<int> settings_pointCloudMode("sub_panel.PC_mode", 1, 1, 4, false);
 
-			pangolin::Var<bool> settings_showFramesWindow("ui.showFramesWindow", false, true);
-			pangolin::Var<bool> settings_showFullTracking("ui.showFullTracking", false, true);
-			pangolin::Var<bool> settings_showCoarseTracking("ui.showCoarseTracking", false, true);
+			pangolin::Var<bool> settings_showKFCameras("sub_panel.KFCam", true, true);
+			pangolin::Var<bool> settings_showCurrentCamera("sub_panel.CurrCam", true, true);
+			pangolin::Var<bool> settings_showTrajectory("sub_panel.Trajectory", true, true);
+			pangolin::Var<bool> settings_showFullTrajectory("sub_panel.FullTrajectory", false, true);
+			pangolin::Var<bool> settings_showActiveConstraints("sub_panel.ActiveConst", true, true);
+			pangolin::Var<bool> settings_showAllConstraints("sub_panel.AllConst", false, true);
 
-			pangolin::Var<int> settings_sparsity("ui.sparsity", 1, 1, 20, false);
-			pangolin::Var<double> settings_scaledVarTH("ui.relVarTH", 0.001, 1e-10, 1e10, true);
-			pangolin::Var<double> settings_absVarTH("ui.absVarTH", 0.001, 1e-10, 1e10, true);
-			pangolin::Var<double> settings_minRelBS("ui.minRelativeBS", 0.1, 0, 1, false);
+			pangolin::Var<bool> settings_show3D("sub_panel.show3D", true, true);
+			pangolin::Var<bool> settings_showLiveDepth("sub_panel.showDepth", false, true);
+			pangolin::Var<bool> settings_showLiveVideo("sub_panel.showVideo", true, true);
+			pangolin::Var<bool> settings_showLiveResidual("sub_panel.showResidual", false, true);
 
-			pangolin::Var<bool> settings_resetButton("ui.Reset", false, false);
+			pangolin::Var<bool> settings_showFramesWindow("sub_panel.showFramesWindow", false, true);
+			pangolin::Var<bool> settings_showFullTracking("sub_panel.showFullTracking", false, true);
+			pangolin::Var<bool> settings_showCoarseTracking("sub_panel.showCoarseTracking", false, true);
 
-			pangolin::Var<int> settings_nPts("ui.activePoints", setting_desiredPointDensity, 50, 5000, false);
-			pangolin::Var<int> settings_nCandidates("ui.pointCandidates", setting_desiredImmatureDensity, 50, 5000, false);
-			pangolin::Var<int> settings_nMaxFrames("ui.maxFrames", setting_maxFrames, 4, 10, false);
-			pangolin::Var<double> settings_kfFrequency("ui.kfFrequency", setting_kfGlobalWeight, 0.1, 3, false);
-			pangolin::Var<double> settings_gradHistAdd("ui.minGradAdd", setting_minGradHistAdd, 0, 15, false);
+			pangolin::Var<int> settings_sparsity("sub_panel.sparsity", 1, 1, 20, false);
+			pangolin::Var<double> settings_scaledVarTH("sub_panel.relVarTH", 0.001, 1e-10, 1e10, true);
+			pangolin::Var<double> settings_absVarTH("sub_panel.absVarTH", 0.001, 1e-10, 1e10, true);
+			pangolin::Var<double> settings_minRelBS("sub_panel.minRelativeBS", 0.1, 0, 1, false);
+
+			pangolin::Var<bool> settings_resetButton("sub_panel.Reset", false, false);
+
+			pangolin::Var<int> settings_nPts("sub_panel.activePoints", setting_desiredPointDensity, 50, 5000, false);
+			pangolin::Var<int> settings_nCandidates("sub_panel.pointCandidates", setting_desiredImmatureDensity, 50, 5000, false);
+			pangolin::Var<int> settings_nMaxFrames("sub_panel.maxFrames", setting_maxFrames, 4, 10, false);
+			pangolin::Var<double> settings_kfFrequency("sub_panel.kfFrequency", setting_kfGlobalWeight, 0.1, 3, false);
+			pangolin::Var<double> settings_gradHistAdd("sub_panel.minGradAdd", setting_minGradHistAdd, 0, 15, false);
 			std::string marking_text = "eg. fault";
 			bool saveimage = false;
 			bool savepcimage = false;
@@ -686,12 +706,24 @@ namespace dso
 			Vec3f res;
 			bool getPointPosition = false;
 			bool getPointPosition2 = false;
-			bool showTotalSize=false;
+			bool showTotalSize = false;
 			GLdouble cursor_pos[3];
 			GLdouble cursor_pos2[3];
+			float boundMaxX, boundMinX, boundMaxY, boundMinY, boundMaxZ, boundMinZ;
+			// bool compassCentreSelected = false;
+			bool compassCentreSelected = false;
+			int compassCentreSelectedX = 0;
+			int compassCentreSelectedY = 0;
+			// bool compassRingSelected = false;
+			bool compassRingSelected = false;
+			int compassRingSelectedX = 0;
+			int compassRingSelectedY = 0;
 			// Default hooks for exiting (Esc) and fullscreen (tab).
 			while (!pangolin::ShouldQuit() && running)
 			{
+				if (pangolin::Var<bool>("ui.Advanced Settings").GuiChanged()) {
+					pangolin::Display("sub_panel").Show((bool)pangolin::Var<bool>("ui.Advanced Settings"));
+				}
 				// Clear entire screen
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -811,197 +843,8 @@ namespace dso
 								failcount++;
 							}
 						}
-
-						// while (getPointPosition)
-						// {
-
-						// 	glReadPixels(rx, ry, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
-						// 	printf("R: %d	 G: %d	 B: %d\n", pixel[0], pixel[1], pixel[2]);
-						// 	returnId = ((int)pixel[0]) * (256 * 256) + ((int)pixel[1]) * 256 + (int)(pixel[2]) - 1;
-
-						// 	if (returnId == -1)
-						// 	{ //nothing
-						// 		printf("clicked on nothing!\n");
-						// 		if (currentSteps >= maxSteps)
-						// 		{
-
-						// 			dir = (dir + 1) % 4;
-						// 			if (dir == DOWN || dir == UP)
-						// 				maxSteps++;
-						// 		}
-						// 		switch (dir)
-						// 		{
-						// 		case UP:
-						// 			ry++;
-						// 			break;
-						// 		case DOWN:
-						// 			ry--;
-						// 			break;
-						// 		case LEFT:
-						// 			rx--;
-						// 			break;
-						// 		case RIGHT:
-						// 			rx++;
-						// 			break;
-						// 		default:
-						// 			break;
-						// 		}
-						// 		currentSteps++;
-
-						// 		if (rx < 0 || ry < 0 || rx > UI_WIDTH + Visualization3D_display.GetBounds().w || ry > Visualization3D_display.GetBounds().h || failcount > 10000)
-						// 			getPointPosition = false;
-						// 		selectedkf = -1;
-						// 		selectedkf_index = -1;
-						// 		failcount++;
-						// 	}
-						// 	else if (returnId == 16777214)
-						// 	{ //current frame
-						// 		printf("clicked on current frame!\n");
-						// 		getPointPosition = false;
-						// 		selectedkf = keyframes.back()->id;
-						// 		selectedkf_index = keyframes.size() - 1;
-						// 	}
-						// 	else
-						// 	{ //clicked some other frame perhaps
-						// 		selectedkf = -1;
-						// 		selectedkf_index = -1;
-						// 		for (KeyFrameDisplay *fh : keyframes)
-						// 		{
-
-						// 			if (returnId == fh->id)
-						// 			{
-						// 				selectedkf = returnId;
-						// 				selectedkfchange = true;
-						// 				for (int i = 0; i < keyframes.size(); ++i)
-						// 				{
-						// 					if (keyframes[i]->id == selectedkf)
-						// 					{
-						// 						selectedkf_index = i;
-						// 						break;
-						// 					}
-						// 				}
-						// 				if (selectedkf_index == -1)
-						// 					selectedkf_index = -2;
-						// 				break;
-						// 			}
-						// 			else if (abs(returnId - fh->id) < 5)
-						// 			{
-						// 				printf("potential match \n");
-						// 			}
-						// 			// if (returnId == fh->id)
-						// 			// {
-						// 			// 	selectedkf = returnId;
-						// 			// 	printf("found match %d",i);
-						// 			// 	for (int i = 0; i < keyframes.size(); ++i)
-						// 			// 	{
-						// 			// 		if (keyframes[i]->id == selectedkf)
-						// 			// 		{
-						// 			// 			selectedkf_index = i;
-						// 			// 			break;
-						// 			// 		}
-						// 			// 		else if ( abs(keyframes[i]->id-selectedkf)<4)
-						// 			// 			printf("potential match %d",i);
-						// 			// 	}
-						// 			// 	selectedkf_index = -2;
-						// 			// 	break;
-						// 			// }
-						// 		}
-						// 		if (selectedkf_index == -2)
-						// 		{
-						// 			printf("failed to find index %d\n", returnId);
-						// 			selectedkf_index = -1;
-						// 		}
-						// 		if (selectedkf_index == -1)
-						// 		{ //nothing
-						// 			printf("clicked on nothing!\n");
-						// 			if (currentSteps >= maxSteps)
-						// 			{
-
-						// 				dir = (dir + 1) % 4;
-						// 				if (dir == DOWN || dir == UP)
-						// 					maxSteps++;
-						// 			}
-						// 			switch (dir)
-						// 			{
-						// 			case UP:
-						// 				ry++;
-						// 				break;
-						// 			case DOWN:
-						// 				ry--;
-						// 				break;
-						// 			case LEFT:
-						// 				rx--;
-						// 				break;
-						// 			case RIGHT:
-						// 				rx++;
-						// 				break;
-						// 			default:
-						// 				break;
-						// 			}
-						// 			currentSteps++;
-
-						// 			if (rx < 0 || ry < 0 || rx > UI_WIDTH + Visualization3D_display.GetBounds().w || ry > Visualization3D_display.GetBounds().h || failcount > 10000)
-						// 				getPointPosition = false;
-						// 			selectedkf = -1;
-						// 			selectedkf_index = -1;
-						// 			failcount++;
-						// 		}
-						// 		else
-						// 		{
-						// 			printf("clicked on ID %d with array position %d\n", returnId, selectedkf_index);
-						// 			getPointPosition = false;
-						// 		}
-						// 	}
-						// }
 						lk3d.unlock();
 						glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-						// if (selectedkf != -1)
-						// {
-						// 	//only render the selected keyframe and color each point in the cloud differently
-						// 	glDrawBuffer(GL_BACK);
-
-						// 	// Activate efficiently by object
-						// 	Visualization3D_display.Activate(Visualization3D_camera);
-						// 	boost::unique_lock<boost::mutex> lk3d(model3DMutex);
-						// 	keyframes[selectedkf_index]->drawIndexedPC(1);
-
-						// 	int kfcolor[3] = {255, 255, 255};
-						// 	keyframes[selectedkf_index]->drawCam(1, kfcolor, 0.1);
-
-						// 	glReadPixels(rx, ry, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
-						// 	printf("R: %d	 G: %d	 B: %d\n", pixel[0], pixel[1], pixel[2]);
-						// 	returnId = (int)(pixel[0] << 16) + (int)(pixel[1] << 8) + (int)(pixel[2]) - 1;
-						// 	if (returnId == -1)
-						// 	{ //nothing
-						// 		printf("clicked on nothing!\n");
-						// 	}
-						// 	else if (returnId == 16777214)
-						// 	{ //current frame
-						// 		printf("clicked on camera!\n");
-						// 	}
-						// 	else
-						// 	{ //clicked some other frame perhaps
-						// 		printf("clicked on point cloud berhaps!\n");
-
-						// 		pangolin::OpenGlMatrix mv = Visualization3D_camera.GetProjectionModelViewMatrix();
-						// 		Sophus::Matrix4f m;
-						// 		for (int i = 0; i < 16; i++)
-						// 		{
-						// 			m(i / 4, i % 4) = mv.m[i];
-						// 		}
-						// 		res = keyframes[selectedkf_index]->getPCbyMatrix(cursor_pos);
-						// 		printf("test - clicked on ID %d with position %f %f %f\n", returnId, res[0], res[1], res[2]);
-
-						// 		// res = keyframes[selectedkf_index]->getPCfromID(returnId);
-						// 		// printf("clicked on ID %d with position %f %f %f\n", returnId, res[0], res[1], res[2]);
-						// 	}
-
-						// 	lk3d.unlock();
-						// 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-						// }
-						// selectedkf = -1;
-						// selectedkf_index = -1;
-						// selectedkfchange = false;
 					}
 					if (checkObject)
 					{
@@ -1020,16 +863,33 @@ namespace dso
 							int fhb = (int)(((uint)(fh->id + 1) << 24) >> 24);
 							int kfcolor[3] = {fhr, fhg, fhb};
 							fh->drawCam(1, kfcolor, 0.1);
+							// fh->drawPC(1, kfcolor);
 						}
 						int kfcolor[3] = {255, 255, 255};
 						currentCam->drawCam(2, kfcolor, 0.2);
+						// currentCam->drawPC(1, kfcolor);
 						// drawConstraints();
+
+						//add compass
+
+						glColor3ub(255, 255, 254);
+
+						glLineWidth(10);
+						drawCircle(compassPosX, 0, compassPosY, 1, 100);
+						glLineWidth(1);
+						glColor3ub(255, 255, 253);
+
+						drawAbsSphere(compassPosX, 0, compassPosY, 1.1 / 10, 10, 10);
 
 						glReadBuffer(GL_BACK);
 						glReadPixels(rx, ry, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
 						printf("R: %d	 G: %d	 B: %d\n", pixel[0], pixel[1], pixel[2]);
 						returnId = (int)(pixel[0] << 16) + (int)(pixel[1] << 8) + (int)(pixel[2]) - 1;
 
+						bool compassRingSelectedPre = compassRingSelected;
+						bool compassCentreSelectedPre = compassCentreSelected;
+						compassCentreSelected=false;
+						compassRingSelected=false;
 						if (returnId == -1)
 						{ //nothing
 							printf("clicked on nothing!\n");
@@ -1050,6 +910,49 @@ namespace dso
 								selectedkf = -1;
 								selectedkf_index = -1;
 								selectedkfchange = true;
+							}
+						}
+						else if (returnId == 16777213)
+						{ //compass ring
+							printf("clicked on Compass Ring\n");
+							if (selectedkf != -1)
+							{
+								selectedkf = -1;
+								selectedkf_index = -1;
+								selectedkfchange = true;
+							}
+							if ( compassRingSelectedPre){
+								// compassRingSelected=true;
+								checkCompass = true;
+								checkCompassMode = ANGLE;
+								angleOffset = 0;
+							}
+							else{
+								compassRingSelectedX = rx;
+								compassRingSelectedY = ry;
+								compassRingSelected=true;
+							}
+						}
+						else if (returnId == 16777212)
+						{ //compass centre
+							printf("clicked on Compass Centre\n");
+							if (selectedkf != -1)
+							{
+								selectedkf = -1;
+								selectedkf_index = -1;
+								selectedkfchange = true;
+							}
+							if ( compassCentreSelectedPre){
+								// compassCentreSelected=true;
+								checkCompass = true;
+								checkCompassMode = POSITION;
+								xOffset = 0;
+								yOffset = 0;
+							}
+							else{
+								compassRingSelectedX = rx;
+								compassRingSelectedY = ry;
+								compassCentreSelected=true;
 							}
 						}
 						else
@@ -1092,20 +995,63 @@ namespace dso
 					//pangolin::glDrawColouredCube();
 
 					glColor3ub(255, 0, 0);
-					drawCompass(compassPosX, 0, compassPosY, 1, compassAngle, 100, (checkCompass) ? 100 : 2);
+					drawCompass(compassPosX, 0, compassPosY, 1, compassAngle, 100, (checkCompass) ? 100 : 2, compassRingSelected || (checkCompass && checkCompassMode==ANGLE),compassCentreSelected|| (checkCompass && checkCompassMode==POSITION));
 					if (cursor_pos[0] != 0)
 						drawAbsSphere(cursor_pos[0], cursor_pos[1], cursor_pos[2], 0.1, 10, 10);
 					if (cursor_pos2[0] != 0)
 					{
 						drawAbsSphere(cursor_pos2[0], cursor_pos2[1], cursor_pos2[2], 0.1, 10, 10);
 						glBegin(GL_LINES);
-						glVertex3f( cursor_pos[0], cursor_pos[1], cursor_pos[2]);
-						glVertex3f( cursor_pos2[0], cursor_pos2[1], cursor_pos2[2]);
+						glVertex3f(cursor_pos[0], cursor_pos[1], cursor_pos[2]);
+						glVertex3f(cursor_pos2[0], cursor_pos2[1], cursor_pos2[2]);
 						glEnd;
 					}
-					
-					// drawCompass(res[0], res[1], res[2], 0.5, 0, 100, 0.1);
-					// drawCompass(cursor_pos[0], cursor_pos[1], cursor_pos[2], 0.2, 0, 100, 0.1);
+					if (showTotalSize)
+					{
+						//vertex3f boundary box here
+						glBegin(GL_LINES);
+						glColor3ub(255, 0, 0);
+						glVertex3f(boundMaxX, boundMaxY, boundMaxZ);
+						glVertex3f(boundMinX, boundMaxY, boundMaxZ);
+
+						glVertex3f(boundMinX, boundMinY, boundMaxZ);
+						glVertex3f(boundMaxX, boundMinY, boundMaxZ);
+
+						glVertex3f(boundMaxX, boundMaxY, boundMinZ);
+						glVertex3f(boundMinX, boundMaxY, boundMinZ);
+
+						glVertex3f(boundMinX, boundMinY, boundMinZ);
+						glVertex3f(boundMaxX, boundMinY, boundMinZ);
+						glColor3ub(100, 100, 255);
+
+						glVertex3f(boundMinX, boundMaxY, boundMaxZ);
+						glVertex3f(boundMinX, boundMinY, boundMaxZ);
+
+						glVertex3f(boundMaxX, boundMinY, boundMaxZ);
+						glVertex3f(boundMaxX, boundMaxY, boundMaxZ);
+
+						glVertex3f(boundMinX, boundMaxY, boundMinZ);
+						glVertex3f(boundMinX, boundMinY, boundMinZ);
+
+						glVertex3f(boundMaxX, boundMinY, boundMinZ);
+						glVertex3f(boundMaxX, boundMaxY, boundMinZ);
+
+						glColor3ub(0, 255, 0);
+						glVertex3f(boundMaxX, boundMinY, boundMinZ);
+						glVertex3f(boundMaxX, boundMinY, boundMaxZ);
+
+						glVertex3f(boundMinX, boundMinY, boundMinZ);
+						glVertex3f(boundMinX, boundMinY, boundMaxZ);
+
+						glVertex3f(boundMinX, boundMaxY, boundMinZ);
+						glVertex3f(boundMinX, boundMaxY, boundMaxZ);
+
+						glVertex3f(boundMaxX, boundMaxY, boundMinZ);
+						glVertex3f(boundMaxX, boundMaxY, boundMaxZ);
+						glColor3ub(255, 0, 0);
+
+						glEnd;
+					}
 					int refreshed = 0;
 					for (KeyFrameDisplay *fh : keyframes)
 					{
@@ -1126,6 +1072,13 @@ namespace dso
 
 						refreshed += (int)(fh->refreshPC(refreshed < 10, this->settings_scaledVarTH, this->settings_absVarTH,
 														 this->settings_pointCloudMode, this->settings_minRelBS, this->settings_sparsity));
+						std::vector<float> boundfh = fh->getBounds();
+						boundMaxX = std::max(boundMaxX, boundfh[0]);
+						boundMinX = std::min(boundMinX, boundfh[1]);
+						boundMaxY = std::max(boundMaxY, boundfh[2]);
+						boundMinY = std::min(boundMinY, boundfh[3]);
+						boundMaxZ = std::max(boundMaxZ, boundfh[4]);
+						boundMinZ = std::min(boundMinZ, boundfh[5]);
 
 						if (this->settings_showKFCameras)
 						{
@@ -1145,25 +1098,67 @@ namespace dso
 						currentCam->drawCam(2, 0, 0.2);
 					}
 					drawConstraints();
+
+					int textCount = 1;
 					if (checkCompass && checkCompassMode == ANGLE)
-						mybigfont.Text("Click and drag on the screen to change compass angle").DrawWindow(Visualization3D_display.GetBounds().l, Visualization3D_display.GetBounds().t() - 1.0f * mybigfont.Height());
+					{
+						mybigfont.Text("Click and drag on the screen to change compass angle").DrawWindow(Visualization3D_display.GetBounds().l, Visualization3D_display.GetBounds().t() - 1.0f * mybigfont.Height() * textCount);
+						textCount++;
+					}
 					if (checkCompass && checkCompassMode == POSITION)
-						mybigfont.Text("Click and drag on the screen to change compass position").DrawWindow(Visualization3D_display.GetBounds().l, Visualization3D_display.GetBounds().t() - 1.0f * mybigfont.Height());
+					{
+						mybigfont.Text("Click and drag on the screen to change compass position").DrawWindow(Visualization3D_display.GetBounds().l, Visualization3D_display.GetBounds().t() - 1.0f * mybigfont.Height() * textCount);
+						textCount++;
+					}
 					if (getPointPosition)
-						mybigfont.Text("Click on an object").DrawWindow(Visualization3D_display.GetBounds().l, Visualization3D_display.GetBounds().t() - 1.0f * mybigfont.Height());
+					{
+						mybigfont.Text("Click on an object").DrawWindow(Visualization3D_display.GetBounds().l, Visualization3D_display.GetBounds().t() - 1.0f * mybigfont.Height() * textCount);
+						textCount++;
+					}
 
 					if (getPointPosition2)
-						mybigfont.Text("Click on the next object").DrawWindow(Visualization3D_display.GetBounds().l, Visualization3D_display.GetBounds().t() - 1.0f * mybigfont.Height());
+					{
+						mybigfont.Text("Click on the next object").DrawWindow(Visualization3D_display.GetBounds().l, Visualization3D_display.GetBounds().t() - 1.0f * mybigfont.Height() * textCount);
+						textCount++;
+					}
+					if(compassCentreSelected)
+					{
+						mybigfont.Text("Click the compass centre again to reposition").DrawWindow(Visualization3D_display.GetBounds().l, Visualization3D_display.GetBounds().t() - 1.0f * mybigfont.Height() * textCount);
+						textCount++;
+					}
+					if(compassRingSelected)
+					{
+						mybigfont.Text("Click the compass ring again to rotate").DrawWindow(Visualization3D_display.GetBounds().l, Visualization3D_display.GetBounds().t() - 1.0f * mybigfont.Height() * textCount);
+						textCount++;
+					}
 					if (cursor_pos2[0] != 0)
-						mybigfont.Text(str(boost::format("Distance: %f") % sqrt(pow(cursor_pos2[0] - cursor_pos[0], 2)+ pow(cursor_pos2[1] - cursor_pos[1], 2)+ pow(cursor_pos2[2] - cursor_pos[2], 2)))).DrawWindow(Visualization3D_display.GetBounds().l, Visualization3D_display.GetBounds().t() - 1.0f * mybigfont.Height());;
+					{
+						mybigfont.Text(str(boost::format("Distance: %f m") % sqrt(pow(cursor_pos2[0] - cursor_pos[0], 2) + pow(cursor_pos2[1] - cursor_pos[1], 2) + pow(cursor_pos2[2] - cursor_pos[2], 2)))).DrawWindow(Visualization3D_display.GetBounds().l, Visualization3D_display.GetBounds().t() - 1.0f * mybigfont.Height() * textCount);
+						textCount++;
+					}
+					if (showTotalSize)
+					{
+						glColor3ub(255, 0, 0);
+						mybigfont.Text(str(boost::format("Length: %f m") % (boundMaxX - boundMinX))).DrawWindow(Visualization3D_display.GetBounds().l, Visualization3D_display.GetBounds().t() - 1.0f * mybigfont.Height() * textCount);
+						textCount++;
+
+						glColor3ub(0, 255, 0);
+						mybigfont.Text(str(boost::format("Breadth: %f m") % (boundMaxZ - boundMinZ))).DrawWindow(Visualization3D_display.GetBounds().l, Visualization3D_display.GetBounds().t() - 1.0f * mybigfont.Height() * textCount);
+						textCount++;
+
+						glColor3ub(100, 100, 255);
+						mybigfont.Text(str(boost::format("Height: %f m") % (boundMaxY - boundMinY))).DrawWindow(Visualization3D_display.GetBounds().l, Visualization3D_display.GetBounds().t() - 1.0f * mybigfont.Height() * textCount);
+						textCount++;
+					}
+
 					lk3d.unlock();
 				}
 				glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 				openImagesMutex.lock();
 				if (videoImgChanged)
 					texVideo.Upload(internalVideoImg->data, GL_BGR, GL_UNSIGNED_BYTE);
-				if (kfImgChanged)
-					texKFDepth.Upload(internalKFImg->data, GL_BGR, GL_UNSIGNED_BYTE);
+				// if (kfImgChanged)
+				// 	texKFDepth.Upload(internalKFImg->data, GL_BGR, GL_UNSIGNED_BYTE);
 				// if (resImgChanged)
 				// 	texResidual.Upload(internalResImg->data, GL_BGR, GL_UNSIGNED_BYTE);
 				if (videoPlayerImgChanged)
@@ -1199,13 +1194,24 @@ namespace dso
 					if (selectedkf != -1)
 					{
 						d_video.Activate();
-						glColor3ub(255, 0, 0);
-						myfont.Text("original video").DrawWindow(d_video.GetBounds().l, d_video.GetBounds().b - 1.0f * myfont.Height());
 						glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 						texVideo.RenderToViewportFlipY();
+						glClear(GL_DEPTH_BUFFER_BIT);
+						glColor3ub(255, 0, 0);
+						myfont.Text("original video").DrawWindow(d_video.GetBounds().l, d_video.GetBounds().b - 1.0f * myfont.Height());
 					}
 					d_video_player.Activate();
 					glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+
+					if (selectedkf != -1){
+						glPushMatrix();
+						glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+						texVideoPlayer.RenderToViewportFlipY();
+						texVideoPlayer.Unbind();
+						glPopMatrix();
+						// glEnable(GL_TEXTURE_2D);
+						glClear(GL_DEPTH_BUFFER_BIT);
+					}
 					if (checkfirst)
 					{
 						if (selectedkf == -1)
@@ -1241,7 +1247,7 @@ namespace dso
 					if (releasesecond)
 					{
 						releasesecond = false;
-						if (selectedkf != -1)
+						if (selectedkf != -1 && (abs(firstx-secondx)>4 &&abs(firsty-secondy)>4 ))
 						{
 							saveimage = true;
 							std::vector<float> coords;
@@ -1260,7 +1266,9 @@ namespace dso
 								if (fh->id == selectedkf)
 								{
 									markings[selectedkf].timestamp = fh->timestamp;
-									fh->addMarking((int)((firsthorizontal + 1) * wG[0] / 2), (int)((secondhorizontal + 1) * wG[0] / 2), (int)((-firstvertical + 1) * hG[0] / 2), (int)((-secondvertical + 1) * hG[0] / 2));
+									printf("add markings %f %f %f %f\n",firsthorizontal,firstvertical,secondhorizontal,secondvertical);
+									fh->addMarking((int)((firsthorizontal + 1) * wG[0] / 2), (int)((secondhorizontal + 1) * wG[0] / 2), (int)((-firstvertical + 1) * hG[0] / 2), (int)((-secondvertical + 1) * hG[0] / 2),this->settings_scaledVarTH, this->settings_absVarTH,
+														 this->settings_pointCloudMode, this->settings_minRelBS, this->settings_sparsity);
 									break;
 								}
 							}
@@ -1278,22 +1286,59 @@ namespace dso
 					glVertex2f(secondhorizontal, secondvertical);
 					glEnd();
 
+					glPopMatrix();
 					//draw previous boxes
 
 					if (markings.find(selectedkf) != markings.end())
 					{ // there are boxes to draw
 						for (auto coords : markings[selectedkf].markings)
 						{
+
+							glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+							glPushMatrix();
+							glColor3ub(205, 0, 0);
 							glBegin(GL_QUADS);
 							glVertex2f(coords[2], coords[1]);
 							glVertex2f(coords[0], coords[1]);
 							glVertex2f(coords[0], coords[3]);
 							glVertex2f(coords[2], coords[3]);
 							glEnd();
+							
+							std::vector<float> dims= keyframes[selectedkf_index]->getMarkingSize((int)((coords[0] + 1) * wG[0] / 2), (int)((coords[2] + 1) * wG[0] / 2), (int)((-coords[1] + 1) * hG[0] / 2), (int)((-coords[3] + 1) * hG[0] / 2));
+
+							glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+							glPopMatrix();
+							float heightOffset=(1.0f * myfont.Height()*4+5)/d_video_player.GetBounds().h;
+							float widthOffset=heightOffset*1.7;
+							float winleft=std::min(std::min(coords[0],coords[2] ),(float)(1-0.36));
+							float wintop;
+							if(std::min(coords[1],coords[3])>heightOffset-1)
+								wintop=std::min(coords[1],coords[3]);
+							else{
+								if(std::max(coords[1],coords[3])>1-heightOffset)
+									wintop=std::max(std::min(coords[1],coords[3]) ,(float)(heightOffset-1));
+								else
+									wintop=std::max(coords[1],coords[3])+heightOffset;
+							}
+							glColor3ub(255, 255, 255);
+							glBegin(GL_QUADS);
+							glVertex2f(winleft-0.01, wintop);
+							glVertex2f(winleft+widthOffset, wintop);
+							glVertex2f(winleft+widthOffset, wintop-heightOffset);
+							glVertex2f(winleft-0.01, wintop-heightOffset);
+							glEnd();
+							glClear(GL_DEPTH_BUFFER_BIT);
+
+							glColor3ub(0, 0, 0);
+							myfont.Text(str(boost::format("width %f m") % dims[0] )).DrawWindow(d_video_player.GetBounds().l+(int)((winleft+ 1) * d_video_player.GetBounds().w / 2),d_video_player.GetBounds().t()-(int)((-wintop + 1) * d_video_player.GetBounds().h / 2)- 1.0f * myfont.Height());
+							myfont.Text(str(boost::format("height %f m") % dims[1])).DrawWindow(d_video_player.GetBounds().l+(int)((winleft + 1) * d_video_player.GetBounds().w / 2),d_video_player.GetBounds().t()-(int)((-wintop + 1) * d_video_player.GetBounds().h / 2)- 2.0f * myfont.Height());
+
+							// glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+							// texVideoPlayer.RenderToViewportFlipY();
 						}
 					}
 
-					glPopMatrix();
+					// glPopMatrix();
 
 					glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
@@ -1337,9 +1382,10 @@ namespace dso
 						{
 							compassAngle = "NW";
 						}
-						mybigfont.Text(str(boost::format("Video at selected position %d min %ds %dms %d %s") % mins % secs % msecs % compass % compassAngle.c_str())).DrawWindow(d_video_player.GetBounds().l, d_video_player.GetBounds().t());
-						glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-						texVideoPlayer.RenderToViewportFlipY();
+						mybigfont.Text(str(boost::format("Video at selected position %d min %ds %dms %d\370 %s") % mins % secs % msecs % compass % compassAngle.c_str())).DrawWindow(d_video_player.GetBounds().l, d_video_player.GetBounds().t());
+
+						// mybigfont.Text("test").DrawWindow(d_video_player.GetBounds().l, d_video_player.GetBounds().t()- 5.0f * mybigfont.Height());
+    					// glDisable(GL_TEXTURE_2D);
 					}
 					else
 					{
@@ -1350,14 +1396,15 @@ namespace dso
 					}
 				}
 
-				if (setting_render_displayDepth)
-				{
-					d_kfDepth.Activate();
-					glColor3ub(255, 0, 0);
-					myfont.Text("features").DrawWindow(d_kfDepth.GetBounds().l, d_kfDepth.GetBounds().b - 1.0f * myfont.Height());
-					glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-					texKFDepth.RenderToViewportFlipY();
-				}
+				// if (setting_render_displayDepth)
+				// {
+				// 	d_kfDepth.Activate();
+				// 	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+				// 	texKFDepth.RenderToViewportFlipY();
+				// 	glClear(GL_DEPTH_BUFFER_BIT);
+				// 	glColor3ub(255, 0, 0);
+				// 	myfont.Text("features").DrawWindow(d_kfDepth.GetBounds().l, d_kfDepth.GetBounds().b - 1.0f * myfont.Height());
+				// }
 
 				// if (setting_render_displayResidual )
 				// {
@@ -1514,7 +1561,10 @@ namespace dso
 				{
 					saveimage = false;
 					savepcimage = true;
-					markings[selectedkf].image = HoldFramebuffer(d_video_player.GetBounds());
+					// mybigfont.Height()
+					pangolin::Viewport v=d_video_player.GetBounds();
+					v.h+= 1.0f*mybigfont.Height();
+					markings[selectedkf].image = HoldFramebuffer(v);
 				}
 				if (settings_saveMarkings.Get())
 				{
@@ -1529,9 +1579,10 @@ namespace dso
 						int secs = (it->second.timestamp / 1000000000) - mins * 60;
 						int msecs = (it->second.timestamp / 1000000) - (secs + mins * 60) * 1000;
 
-						pangolin::SaveImage(it->second.pointcloud, fmt, str(boost::format("save/%s/pointcloud_%dmin_%ds_%dms") % filename.c_str() % mins % secs % msecs) + ".png", false);
-						pangolin::SaveImage(it->second.image, fmt, str(boost::format("save/%s/image_%dmin_%ds_%dms") % filename.c_str() % mins % secs % msecs) + ".png", false);
+						pangolin::SaveImage(it->second.pointcloud, fmt, str(boost::format("../save/%s/%dmin_%ds_%dms_pointcloud") % filename.c_str() % mins % secs % msecs) + ".png", false);
+						pangolin::SaveImage(it->second.image, fmt, str(boost::format("../save/%s/%dmin_%ds_%dms_image") % filename.c_str() % mins % secs % msecs) + ".png", false);
 					}
+					system(str(boost::format("xdg-open ../save/%s/") % filename.c_str() ).c_str());
 				}
 				if (settings_exportPointCloud.Get())
 				{
@@ -1543,12 +1594,15 @@ namespace dso
 					{
 						fh->addPC(&pcloud, this->settings_scaledVarTH, this->settings_absVarTH,
 								  this->settings_pointCloudMode, this->settings_minRelBS, this->settings_sparsity);
+
+
 					}
 					std::time_t end_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 					std::string rawstr = str(boost::format("save/%s/export%s.pcd") % filename.c_str() % std::ctime(&end_time));
 					std::replace(rawstr.begin(), rawstr.end(), ':', '_');
 					std::replace(rawstr.begin(), rawstr.end(), ' ', '_');
 					pcl::io::savePCDFileBinary(rawstr.c_str(), pcloud);
+					system(str(boost::format("xdg-open ../save/%s/") % filename.c_str() ).c_str());
 				}
 
 				if (settings_setCompassNorth.Get())
@@ -1573,8 +1627,20 @@ namespace dso
 				{
 					if (checkCompassMode == ANGLE)
 					{
-						compassX = (float)(rx - UI_WIDTH) - (float)Visualization3D_display.GetBounds().w / 2;
-						compassY = (float)ry - (float)Visualization3D_display.GetBounds().h / 2;
+						// compassX = (float)(rx - UI_WIDTH) - (float)Visualization3D_display.GetBounds().w / 2;
+						// compassY = (float)ry - (float)Visualization3D_display.GetBounds().h / 2;
+						GLdouble compassPos[3];
+						int viewport[4];
+						double matModelView[16];
+						double matProjection[16];
+						// get matrixs and viewport:
+						Visualization3D_display.Activate(Visualization3D_camera);
+						glGetDoublev(GL_MODELVIEW_MATRIX, matModelView);
+						glGetDoublev(GL_PROJECTION_MATRIX, matProjection);
+						glGetIntegerv(GL_VIEWPORT, viewport);
+						gluProject(compassPosX, 0, compassPosY, matModelView, matProjection, viewport, &compassPos[0], &compassPos[1], &compassPos[2]);
+						compassX = (float)(rx) - (float)compassPos[0];
+						compassY = (float)ry - (float)compassPos[1];
 
 						if (compassFirstClick)
 						{
@@ -1644,18 +1710,21 @@ namespace dso
 				if (settings_getPointPosition.Get())
 				{
 					settings_getPointPosition.Reset();
-					if(cursor_pos2[0]!=0){
+					if (cursor_pos2[0] != 0)
+					{
 						memset(cursor_pos, 0, sizeof(cursor_pos));
 						memset(cursor_pos2, 0, sizeof(cursor_pos2));
 					}
-					else{
+					else
+					{
 						printf("click on Point Cloud!\n");
-						getPointPosition = true;
+						getPointPosition = !getPointPosition;
 					}
 				}
-				if (settings_getDimensions.Get()){
+				if (settings_getDimensions.Get())
+				{
 					settings_getDimensions.Reset();
-					showTotalSize=!showTotalSize;
+					showTotalSize = !showTotalSize;
 				}
 			}
 			printf("QUIT Pangolin thread!\n");
