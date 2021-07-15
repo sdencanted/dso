@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <vector>
 #include "util/settings.h"
-
+#include <unsupported/Eigen/EulerAngles>
 //#include <GL/glx.h>
 //#include <GL/gl.h>
 //#include <GL/glu.h>
@@ -61,6 +61,10 @@ namespace dso
 
 			numGLBufferPoints = 0;
 			bufferValid = false;
+			moffset.setZero();
+			moffset(3, 3) = moffset(2, 2) = moffset(1, 1) = moffset(0, 0) = 1;
+
+			maxX = maxY = maxZ = minX = minY = minZ = 0;
 		}
 		void KeyFrameDisplay::setFromF(FrameShell *frame, CalibHessian *HCalib)
 		{
@@ -186,6 +190,22 @@ namespace dso
 			if (originalInputSparse != 0)
 				delete[] originalInputSparse;
 		}
+		void KeyFrameDisplay::setCamOffset(Sophus::Vector3f offset)
+		{
+			moffset(0, 0) = moffset(1, 1) = moffset(2, 2) = moffset(3, 3) = 1;
+			moffset(0, 3) = offset.x();
+			moffset(1, 3) = -offset.y();
+			moffset(2, 3) = offset.z();
+			needRefresh = true;
+			while (!refreshPC(true, my_scaledTH, my_absTH, my_displayMode, my_minRelBS, my_sparsifyFactor))
+				;
+			// printf("maxmin %f %f %f %f %f %f\n", maxX, maxY, maxZ, minX, minY, minZ);
+		}
+		Sophus::Vector3f KeyFrameDisplay::getCamOffset()
+		{
+			Sophus::Vector3f offset(moffset(0, 3), -moffset(1, 3), moffset(2, 3));
+			return offset;
+		}
 		std::vector<float> KeyFrameDisplay::getBounds()
 		{
 			std::vector<float> bounds;
@@ -197,13 +217,22 @@ namespace dso
 			bounds.push_back(minZ);
 			return bounds;
 		}
+		Sophus::Vector3f KeyFrameDisplay::getCamCoords()
+		{
+			Sophus::Matrix4f m = moffset * camToWorld.matrix().cast<float>();
+			Sophus::Vector4f tempVector(0, 0, 0, 1);
+			tempVector = m * tempVector;
+			// printf("tempvec %f %f %f\n",tempVector.x(),tempVector.y(),tempVector.z());
+			Sophus::Vector3f res(tempVector.x(), -tempVector.y(), tempVector.z());
+			return res;
+		}
 		bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, int mode, float minBS, int sparsity)
 		{
 			std::vector<float> camX, camY;
 			std::vector<float> depthTotal;
+			std::vector<float> depthCenterTotal;
 			std::vector<float> allX, allY, allZ;
-			maxX = maxY = maxZ = minX = minY = minZ = 0;
-			Sophus::Matrix4f m = camToWorld.matrix().cast<float>();
+			Sophus::Matrix4f m = moffset * camToWorld.matrix().cast<float>();
 			Sophus::Vector4f tempVector;
 			tempVector[3] = 1; //signifies the vector is a position in space
 
@@ -242,8 +271,8 @@ namespace dso
 			float scoreTopLeft, scoreBotRight;
 			std::vector<float> positionTopLeft(2), positionBotRight(2);
 			std::vector<float> pixelTopLeft(2), pixelBotRight(2);
-			pixelBotRight[0]=9999;
-			pixelBotRight[1]=9999;
+			pixelBotRight[0] = 9999;
+			pixelBotRight[1] = 9999;
 
 			std::vector<int> abox;
 			bool doboxes = boxes.size() > boxDim.size();
@@ -268,20 +297,18 @@ namespace dso
 
 				if (my_displayMode == 1 && originalInputSparse[i].status != 1 && originalInputSparse[i].status != 2)
 					continue;
-				// if (doboxes) printf("test1\n" );
 				if (my_displayMode == 2 && originalInputSparse[i].status != 1)
 					continue;
-				// if (doboxes) printf("test2\n" );
 				if (my_displayMode > 2)
 					continue;
-				// if (doboxes) printf("test3\n" );
 
 				if (originalInputSparse[i].idpeth < 0)
 					continue;
-				// if (doboxes) printf("test4\n" );
 
 				float depth = 1.0f / originalInputSparse[i].idpeth;
 				depthTotal.push_back(depth);
+				if (abs((originalInputSparse[i].u) * fxi + cxi) * depth < 0.6 && abs((originalInputSparse[i].v) * fyi + cyi) * depth < 0.6)
+					depthCenterTotal.push_back(depth);
 				float depth4 = depth * depth;
 				depth4 *= depth4;
 				float var = (1.0f / (originalInputSparse[i].idepth_hessian + 0.01));
@@ -289,59 +316,20 @@ namespace dso
 				if (var * depth4 > my_scaledTH)
 					continue;
 
-				// if (doboxes) printf("test5\n" );
-
 				if (var > my_absTH)
 					continue;
 
-				// if (doboxes) printf("test6\n" );
-
 				if (originalInputSparse[i].relObsBaseline < my_minRelBS)
 				{
-					// printf("bs %f\n",my_minRelBS);
 					continue;
 				}
-				// printf ("sizes %d %d\n",boxes.size() , boxDim.size());
 				if (doboxes)
 				{
-					// std::vector<int> box = boxes.back(); // add pixel to potential point for calculating width / height
-					// boxDim;
-					printf("aaaa %f\n",((originalInputSparse[i].u) * fxi + cxi) * depth);
-					
+					printf("aaaa %f\n", ((originalInputSparse[i].u) * fxi + cxi) * depth);
+
 					camX.insert(std::upper_bound(camX.begin(), camX.end(), ((originalInputSparse[i].u) * fxi + cxi) * depth), ((originalInputSparse[i].u) * fxi + cxi) * depth);
 
 					camY.insert(std::upper_bound(camY.begin(), camY.end(), ((originalInputSparse[i].v) * fyi + cyi) * depth), ((originalInputSparse[i].v) * fyi + cyi) * depth);
-					// scoreTopLeft = abs((int)abox[0] - (int)originalInputSparse[i].u) + abs((int)abox[2] - (int)originalInputSparse[i].v);
-					// scoreBotRight = abs((int)abox[1] - (int)originalInputSparse[i].u) + abs((int)abox[3] - (int)originalInputSparse[i].v);
-
-					// printf("scores %f %f\n", scoreTopLeft, scoreBotRight);
-					// printf("position topleft %f %f\n", positionTopLeft[0], positionTopLeft[1]);
-					// printf("position botright %f %f\n", positionBotRight[0], positionBotRight[1]);
-					// printf("pixel topleft %f %f\n", pixelTopLeft[0], pixelTopLeft[1]);
-					// printf("pixel botright %f %f\n", pixelBotRight[0], pixelBotRight[1]);
-					// // if (scoreTopLeft>0 && scoreTopLeft < bestScoreTopLeft && (abox[1] >= originalInputSparse[i].u && abox[3] >= originalInputSparse[i].v))
-					// if (scoreTopLeft>0 && scoreTopLeft < bestScoreTopLeft)
-					// {
-					// 	bestScoreTopLeft = scoreTopLeft;
-					// 	printf("score\n");
-					// 	positionTopLeft[0] = ((originalInputSparse[i].u) * fxi + cxi) * depth;
-					// 	positionTopLeft[1] = ((originalInputSparse[i].v) * fyi + cyi) * depth;
-					// 	pixelTopLeft[0] = originalInputSparse[i].u;
-					// 	pixelTopLeft[1] = originalInputSparse[i].v;
-					// 	// positionTopLeft[2] = depth * (1 + 2 * fxi * (rand() / (float)RAND_MAX - 0.5f));
-					// }
-					// // if (scoreBotRight>0 && scoreBotRight < bestScoreBotRight && (abox[0] <= originalInputSparse[i].u && abox[2] <= originalInputSparse[i].v))
-					// if (scoreBotRight>0 && scoreBotRight < bestScoreBotRight)
-					// {
-					// 	bestScoreBotRight = scoreBotRight;
-					// 	printf("score\n");
-
-					// 	positionBotRight[0] = ((originalInputSparse[i].u) * fxi + cxi) * depth;
-					// 	positionBotRight[1] = ((originalInputSparse[i].v) * fyi + cyi) * depth;
-					// 	pixelBotRight[0] = originalInputSparse[i].u;
-					// 	pixelBotRight[1] = originalInputSparse[i].v;
-					// 	// positionBotRight[2] = depth * (1 + 2 * fxi * (rand() / (float)RAND_MAX - 0.5f));
-					// }
 				}
 				drawMarking = false;
 				for (auto bbox : boxes)
@@ -405,14 +393,19 @@ namespace dso
 				// std::sort(allX.begin(), allX.end());
 				// std::sort(allY.begin(), allY.end());
 				// std::sort(allZ.begin(), allZ.end());
-				int percent5 = allX.size() * 0.05;
-				int percent95 = allX.size() * 0.95;
-				maxX = allX[percent95];
-				minX = allX[percent5];
-				maxY = allY[percent95];
-				minY = allY[percent5];
-				maxZ = allZ[percent95];
-				minZ = allZ[percent5];
+				if (allX.size() > 5)
+				{
+					int percent5 = allX.size() * 0.05;
+					int percent95 = allX.size() * 0.95;
+
+					maxX = maxY = maxZ = minX = minY = minZ = 0;
+					maxX = allX[percent95];
+					minX = allX[percent5];
+					maxY = allY[percent95];
+					minY = allY[percent5];
+					maxZ = allZ[percent95];
+					minZ = allZ[percent5];
+				}
 			}
 			if (doboxes)
 			{
@@ -433,13 +426,37 @@ namespace dso
 				std::vector<float> dims;
 				// dims.push_back((camX[percentx95] - camX[percentx5]) * ((abox[1] - abox[0]) / wG[0]));
 				// dims.push_back((camY[percenty95] - camY[percenty5]) * ((abox[3] - abox[2]) / hG[0]));
-				if(depthTotal.size()>5){
-					
-					dims.push_back(((abox[1]-abox[0]) * fxi) * depthTotal[depthTotal.size()/2]);
-					dims.push_back(((abox[3]-abox[2]) * fyi) * depthTotal[depthTotal.size()/2]);
+				if (depthTotal.size() > 5)
+				{
+
+					dims.push_back(((abox[1] - abox[0]) * fxi) * depthTotal[depthTotal.size() / 2]);
+					dims.push_back(((abox[3] - abox[2]) * fyi) * depthTotal[depthTotal.size() / 2]);
 					printf("pushing back %f %f\n", dims[0], dims[1]);
 					boxDim.push_back(dims);
 				}
+				else
+				{
+					printf("not enough depth %d\n", (int)depthTotal.size());
+				}
+			}
+
+			if (depthCenterTotal.size() > 5)
+			{
+				for (int i = 0; i < depthCenterTotal.size(); i++)
+				{
+					if (depthCenterTotal[i] < depthTotal[depthTotal.size() * 0.2] || depthCenterTotal[i] > depthTotal[depthTotal.size() * 0.8])
+					{
+						depthCenterTotal.erase(depthCenterTotal.begin() + i);
+						i--;
+					}
+				}
+				tempVector[0] = 0;
+				tempVector[1] = 0;
+				tempVector[2] = depthCenterTotal[depthCenterTotal.size() * 0.5];
+				tempVector = m * tempVector;
+				centerCoordinates[0] = tempVector[0];
+				centerCoordinates[1] = tempVector[1];
+				centerCoordinates[2] = tempVector[2];
 			}
 			if (vertexBufferNumPoints == 0)
 			{
@@ -464,6 +481,70 @@ namespace dso
 			return true;
 		}
 
+		std::vector<double> KeyFrameDisplay::getSquareError(float cx, float cz, float r)
+		{
+			Sophus::Matrix4f m = moffset * camToWorld.matrix().cast<float>();
+			Sophus::Vector4f tempVector;
+			tempVector[3] = 1; //signifies the vector is a position in space
+			double errorsum = 0;
+			double points = 0;
+			if (writingMutex)
+			{
+				std::vector<double> a(2, 0);
+				return a;
+			}
+			for (int i = 0; i < numSparsePoints; i++)
+			{
+				// if (doboxes) printf("test0\n" );
+				/* display modes:
+					* my_displayMode==0 - all pts, color-coded
+					* my_displayMode==1 - normal points
+					* my_displayMode==2 - active only
+					* my_displayMode==3 - nothing
+					*/
+
+				if (my_displayMode == 1 && originalInputSparse[i].status != 1 && originalInputSparse[i].status != 2)
+					continue;
+				if (my_displayMode == 2 && originalInputSparse[i].status != 1)
+					continue;
+				if (my_displayMode > 2)
+					continue;
+
+				if (originalInputSparse[i].idpeth < 0)
+					continue;
+
+				float depth = 1.0f / originalInputSparse[i].idpeth;
+				float depth4 = depth * depth;
+				depth4 *= depth4;
+				float var = (1.0f / (originalInputSparse[i].idepth_hessian + 0.01));
+
+				if (var * depth4 > my_scaledTH)
+					continue;
+
+				if (var > my_absTH)
+					continue;
+
+				if (originalInputSparse[i].relObsBaseline < my_minRelBS)
+				{
+					continue;
+				}
+
+				tempVector[0] = ((originalInputSparse[i].u) * fxi + cxi) * depth;
+				tempVector[1] = ((originalInputSparse[i].v) * fyi + cyi) * depth;
+				tempVector[2] = depth * (1 + 2 * fxi * (rand() / (float)RAND_MAX - 0.5f));
+				tempVector = m * tempVector;
+				points++;
+				errorsum += pow(r - sqrt(pow(cx - tempVector[0], 2) + pow(cz - tempVector[2], 2)), 2);
+			}
+			std::vector<double> res;
+			res.push_back(errorsum);
+			res.push_back(points);
+			return res;
+		}
+		Vec3f KeyFrameDisplay::getCamCenter()
+		{
+			return centerCoordinates;
+		}
 		void drawSphere(double r, int lats, int longs)
 		{
 			int i, j;
@@ -531,9 +612,9 @@ namespace dso
 			// printf("box %d %d %d %d %d\n", box[0], box[1], box[2], box[3], box[0] == 0);
 			// printf("sizes %d %d\n", (int)boxes.size(), (int)boxDim.size());
 
-			
 			//refresh PC until the coordinates are updated
-			while ( boxes.size()>boxDim.size()){
+			while (boxes.size() > boxDim.size())
+			{
 				needRefresh = true;
 				refreshPC(true, scaledTH, absTH, mode, minBS, sparsity);
 			}
@@ -561,23 +642,15 @@ namespace dso
 		{
 
 			Sophus::Matrix<float, 3, 3> m = camToWorld.rotationMatrix().cast<float>();
-			// Eigen::Matrix<float, 9, 1> mat;
-			// for (int i = 0; i < 3; i++)
-			// {
-			// 	for (int u = 0; u < 3; u++)
-			// 	{
-			// 		mat[u * 3 + i] = m[i * 4 + u];
-			// 	}
-			// }
-			// printf("rotation %f %f %f\n",m(0,0),m(0,1),m(0,2));
-			// printf("rotation %f %f %f\n",m(1,0),m(1,1),m(1,2));
-			// printf("rotation %f %f %f\n",m(2,0),m(2,1),m(2,2));
-			int yaw = -((atan2(m(2, 0), sqrt(pow(m(2, 1), 2) + pow(m(2, 2), 2))) * 180.0f / 3.14159) + offsetAngle);
-			if (yaw < 0)
-				yaw += 360;
-			if (yaw < 0)
-				yaw += 360;
-			return yaw;
+			Sophus::Matrix<float, 3, 3> rot;
+			rot.setZero();
+			rot(1,0)=rot(2,2)=1;
+			rot(0,1)=-1;
+			m=rot*m;
+			Sophus::Vector3f ea = m.eulerAngles(2, 0,1)* 180.0f / 3.14159;
+			// printf("euler %f %f %f\n",ea[0],ea[1],ea[2]);//stable
+			if(ea[2]<0)ea[2]+=360;
+			return ea[2];
 		}
 		void KeyFrameDisplay::addPC(pcl::PointCloud<pcl::PointXYZRGB> *pcloud, float scaledTH, float absTH, int mode, float minBS, int sparsity)
 		{
@@ -592,7 +665,7 @@ namespace dso
 			my_minRelBS = minBS;
 			my_sparsifyFactor = sparsity;
 
-			Sophus::Matrix4f m = camToWorld.matrix().cast<float>();
+			Sophus::Matrix4f m = moffset * camToWorld.matrix().cast<float>();
 			Sophus::Vector4f tempVector;
 			tempVector[3] = 1; //signifies the vector is a position in space
 			// make data
@@ -698,7 +771,7 @@ namespace dso
 
 			glPushMatrix();
 
-			Sophus::Matrix4f m = camToWorld.matrix().cast<float>();
+			Sophus::Matrix4f m = moffset * camToWorld.matrix().cast<float>();
 			glMultMatrixf((GLfloat *)m.data());
 
 			if (color == 0)
@@ -827,9 +900,8 @@ namespace dso
 			for (int i = 0; i < 3; i++)
 				result[i] = tmpVertexBufferIndex[id][i];
 
-			Sophus::Matrix4f m = camToWorld.matrix().cast<float>();
-			Sophus::Vector4f tempVector;
-			tempVector[3] = 1; //signifies the vector is a position in space
+			Sophus::Matrix4f m = moffset * camToWorld.matrix().cast<float>();
+			Sophus::Vector4f tempVector(0, 0, 0, 1); //signifies the vector is a position in space
 			for (int i = 0; i < 3; i++)
 				tempVector[i] = result[i];
 			tempVector = m * tempVector;
@@ -846,7 +918,7 @@ namespace dso
 			int best_ind = -1;
 			int best_score = 9999999;
 			int score = 0;
-			Sophus::Matrix4f m = camToWorld.matrix().cast<float>();
+			Sophus::Matrix4f m = moffset * camToWorld.matrix().cast<float>();
 			Sophus::Vector4f tempVector;
 			tempVector[3] = 1; //signifies the vector is a position in space
 			for (int ind = 0; ind < numPoints; ind++)
@@ -900,7 +972,7 @@ namespace dso
 
 			glPushMatrix();
 
-			Sophus::Matrix4f m = camToWorld.matrix().cast<float>();
+			Sophus::Matrix4f m = moffset * camToWorld.matrix().cast<float>();
 			glMultMatrixf((GLfloat *)m.data());
 
 			glPointSize(pointSize);

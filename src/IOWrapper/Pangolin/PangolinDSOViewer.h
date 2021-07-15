@@ -104,6 +104,7 @@ private:
 	void reset_internal();
 	void drawConstraints();
 	void drawCircle(float cx, float cy, float cz, float r, int num_segments);
+	void drawArc(Sophus::Vector3f p1,Sophus::Vector3f p2,int angle);
 	void drawCompass(float cx, float cy, float cz, float r, int angle, int num_segments, int pointerScale, bool ringSelected,bool centreSelected);
 	void angleglVertex3f(float cx,float dx, float cy, float cz, float dz, float theta);
 	void drawAbsSphere(float ax, float ay, float az, double r, int lats, int longs);

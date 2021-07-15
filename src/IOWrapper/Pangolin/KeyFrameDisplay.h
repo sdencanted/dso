@@ -111,8 +111,16 @@ public:
 	void addPC(pcl::PointCloud<pcl::PointXYZRGB>* pcloud,float scaledTH, float absTH, int mode, float minBS, int sparsity);
 	Vec3f getPCbyMatrix( GLdouble cursor_pos[3]);
 	Vec3f getPCfromID(int id);
+	Vec3f centerCoordinates;
+	Vec3f getCamCenter();
 	std::vector<float> getBounds();
+	std::vector<double> getSquareError(float cx, float cz,float r);
+	Sophus::Vector3f getCamCoords();
+
+	void setCamOffset(Sophus::Vector3f offset);
+	Sophus::Vector3f  getCamOffset();
 private:
+	Sophus::Matrix4f moffset;
 	bool writingMutex;
 	float fx,fy,cx,cy;
 	float fxi,fyi,cxi,cyi;
