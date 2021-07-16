@@ -2525,9 +2525,9 @@ namespace dso
 			model3DMutex.unlock();
 		}
 		void PangolinDSOViewer::publishKeyframes(
-			std::vector<std::shared_ptr<FrameHessian>> &frames,
+			std::vector<FrameHessian*> &frames,
 			bool final,
-			std::shared_ptr<CalibHessian> Hcalib)
+			CalibHessian* Hcalib)
 		{
 			if (!setting_render_display3D)
 				return;
@@ -2535,7 +2535,7 @@ namespace dso
 				return;
 
 			boost::unique_lock<boost::mutex> lk(model3DMutex);
-			for (std::shared_ptr<FrameHessian>fh : frames)
+			for (auto *fh : frames)
 			{
 				if (keyframesByKFID.find(fh->frameID) == keyframesByKFID.end())
 				{
@@ -2570,7 +2570,7 @@ namespace dso
 			allFramePoses.push_back(frame->camToWorld.translation().cast<float>());
 		}
 
-		void PangolinDSOViewer::pushLiveFrame(std::shared_ptr<FrameHessian>image)
+		void PangolinDSOViewer::pushLiveFrame(FrameHessian* image)
 		{
 			if (!setting_render_displayVideo)
 				return;
