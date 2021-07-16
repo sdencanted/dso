@@ -860,8 +860,8 @@ namespace dso
 			pangolin::Var<bool> settings_setCompassNorth("ui.Set Frame as North", false, false);
 			pangolin::Var<bool> settings_measureCompass("ui.Measure from NSEW", false, false);
 			pangolin::Var<bool> settings_moveFrame("ui.Move Frame", false, false);
+			pangolin::Var<bool> settings_closeLoop("ui.Close Loop", false, false);
 
-			pangolin::Var<double> settings_angle("ui.angle", setting_kfGlobalWeight, 1, 179, false);
 			// pangolin::Var<bool> settings_showAdv("ui.Advanced settings", true, true);
 			pangolin::CreatePanel("sub_panel").SetBounds(0.0, 0.5, 0, pangolin::Attach::Pix(UI_WIDTH));
 			pangolin::Display("sub_panel").Show(false);
@@ -897,11 +897,18 @@ namespace dso
 			pangolin::Var<double> settings_kfFrequency("sub_panel.kfFrequency", setting_kfGlobalWeight, 0.1, 3, false);
 			pangolin::Var<double> settings_gradHistAdd("sub_panel.minGradAdd", setting_minGradHistAdd, 0, 15, false);
 
-			pangolin::CreatePanel("are_you_sure").SetBounds(0.0, 1, 0, pangolin::Attach::Pix(UI_WIDTH));
-			pangolin::Display("are_you_sure").Show(false);
-			pangolin::Var<std::string> settings_test("are_you_sure.Deleting all markings. Are you sure?", "", false);
-			pangolin::Var<bool> settings_yes("are_you_sure.yes", false, false);
-			pangolin::Var<bool> settings_no("are_you_sure.no", false, false);
+			pangolin::CreatePanel("delete_markings").SetBounds(0.0, 1, 0, pangolin::Attach::Pix(UI_WIDTH));
+			pangolin::Display("delete_markings").Show(false);
+			pangolin::Var<std::string> settings_test("delete_markings.Deleting all markings. Are you sure?", "", false);
+			pangolin::Var<bool> settings_delete_markings_yes("delete_markings.yes", false, false);
+			pangolin::Var<bool> settings_delete_markings_no("delete_markings.no", false, false);
+
+			pangolin::CreatePanel("close_loop").SetBounds(0.0, 1, 0, pangolin::Attach::Pix(UI_WIDTH));
+			pangolin::Display("close_loop").Show(false);
+			pangolin::Var<std::string> settings_close_loop("close_loop.Confirm Loop Closure", "", false);
+			pangolin::Var<bool> settings_close_loop_yes("close_loop.yes", false, false);
+			pangolin::Var<bool> settings_close_loop_no("close_loop.no", false, false);
+
 			std::string marking_text = "eg. fault";
 			bool saveimage = false;
 			bool savepcimage = false;
@@ -941,6 +948,9 @@ namespace dso
 			Sophus::Vector3f camCoordsOffset;
 			int selectedAxis;
 			bool isInverted = false;
+			int closeLoopMode = CL_OFF;
+			int closeLoopFirstFrame;
+			int closeLoopSecondFrame;
 			// Default hooks for exiting (Esc) and fullscreen (tab).
 			while (!pangolin::ShouldQuit() && running)
 			{
@@ -1518,7 +1528,7 @@ namespace dso
 										prevangle[i] = centerangle;
 										compassDistances[i] = ((float)(centerangle % 180) / 180) * 3.14159 * r;
 									}
-									printf("MS error %f %f %f\n", (float)mserror[i], errorsum, points);
+									// printf("MS error %f %f %f\n", (float)mserror[i], errorsum, points);
 								}
 
 								for (int centerangle = 1; centerangle < 180; centerangle++)
@@ -1555,11 +1565,11 @@ namespace dso
 										compassDistances[i] = ((float)(centerangle % 180) / 180) * 3.14159 * r;
 										invertedPath[i] = true;
 									}
-									printf("MS error %f %f %f\n", (float)mserror[i], errorsum, points);
+									// printf("MS error %f %f %f\n", (float)mserror[i], errorsum, points);
 								}
 								mserror[i] = lowestmse;
 							}
-							printf("compass %d inverted %d angle %d selkf %d com %d\n", i, (int)invertedPath[i], prevangle[i], selectedkf_index, compasskfs[i]);
+							// printf("compass %d inverted %d angle %d selkf %d com %d\n", i, (int)invertedPath[i], prevangle[i], selectedkf_index, compasskfs[i]);
 							// if (invertedPath[i] ^ selectedkf_index < compasskfs[i])
 							if (invertedPath[i] ^ selectedkf < compasskfs[i])
 							{
@@ -1570,11 +1580,44 @@ namespace dso
 								drawArc(selCoords, compassCoords, prevangle[i]);
 							}
 
-							printf("compasses %d %d %d %d\n", northKF, eastKF, southKF, westKF);
+							// printf("compasses %d %d %d %d\n", northKF, eastKF, southKF, westKF);
 						}
 					}
 					drawConstraints();
+
 					int textCount = 1;
+					if (closeLoopMode == CL_SELECT_FIRST)
+					{
+
+						mybigfont.Text("Click on one end of the loop").DrawWindow(Visualization3D_display.GetBounds().l, Visualization3D_display.GetBounds().t() - 1.0f * mybigfont.Height() * textCount);
+						textCount++;
+						if (selectedkf_index != -1)
+						{
+							closeLoopFirstFrame = selectedkf_index;
+							closeLoopMode = CL_SELECT_SECOND;
+							selectedkf_index = -1;
+							selectedkf = -1;
+							selectedkfchange = false;
+						}
+					}
+					else if (closeLoopMode == CL_SELECT_SECOND)
+					{
+
+					
+						if (selectedkf_index != -1)
+						{
+							closeLoopSecondFrame = selectedkf_index;
+
+							pangolin::Display("close_loop").Show(true);
+							// selectedkf_index = -1;
+							// selectedkf = -1;
+							// selectedkfchange = false;
+						}
+						else{
+						mybigfont.Text("Click on the next end of the loop").DrawWindow(Visualization3D_display.GetBounds().l, Visualization3D_display.GetBounds().t() - 1.0f * mybigfont.Height() * textCount);
+						textCount++;
+						}
+					}
 
 					if (measureCompass && selectedkf != -1)
 					{
@@ -1965,13 +2008,13 @@ namespace dso
 				{
 					printf("deleting all markings!\n");
 
-					pangolin::Display("are_you_sure").Show(true);
+					pangolin::Display("delete_markings").Show(true);
 					settings_deleteAllMarkings.Reset();
 				}
-				if (settings_yes.Get())
+				if (settings_delete_markings_yes.Get())
 				{
-					settings_yes.Reset();
-					pangolin::Display("are_you_sure").Show(false);
+					settings_delete_markings_yes.Reset();
+					pangolin::Display("delete_markings").Show(false);
 					markings.clear();
 					firsthorizontal = 0;
 					secondhorizontal = 0;
@@ -1980,10 +2023,22 @@ namespace dso
 					for (auto &kf : keyframes)
 						kf->removeMarking();
 				}
-				if (settings_no.Get())
+				if (settings_delete_markings_no.Get())
 				{
-					settings_no.Reset();
-					pangolin::Display("are_you_sure").Show(false);
+					settings_delete_markings_no.Reset();
+					pangolin::Display("delete_markings").Show(false);
+				}
+				if (settings_close_loop_yes.Get())
+				{
+					settings_close_loop_yes.Reset();
+					pangolin::Display("close_loop").Show(false);
+					closeLoopMode = CL_CONFIRM;
+				}
+				if (settings_close_loop_no.Get())
+				{
+					settings_close_loop_no.Reset();
+					pangolin::Display("close_loop").Show(false);
+					closeLoopMode = CL_OFF;
 				}
 				if (settings_deleteMarkings.Get())
 				{
@@ -2174,6 +2229,16 @@ namespace dso
 					camCoords.setZero();
 					camCoordsOffset.setZero();
 					settings_moveFrame.Reset();
+				}
+				if (settings_closeLoop.Get())
+				{
+					printf("close loop mode\n");
+
+					settings_closeLoop.Reset();
+					closeLoopMode = CL_SELECT_FIRST;
+					selectedkf = -1;
+					selectedkf_index = -1;
+					selectedkfchange = false;
 				}
 				if (settings_moveCompass.Get())
 				{
@@ -2460,9 +2525,9 @@ namespace dso
 			model3DMutex.unlock();
 		}
 		void PangolinDSOViewer::publishKeyframes(
-			std::vector<FrameHessian *> &frames,
+			std::vector<std::shared_ptr<FrameHessian>> &frames,
 			bool final,
-			CalibHessian *HCalib)
+			std::shared_ptr<CalibHessian> Hcalib)
 		{
 			if (!setting_render_display3D)
 				return;
@@ -2470,7 +2535,7 @@ namespace dso
 				return;
 
 			boost::unique_lock<boost::mutex> lk(model3DMutex);
-			for (FrameHessian *fh : frames)
+			for (std::shared_ptr<FrameHessian>fh : frames)
 			{
 				if (keyframesByKFID.find(fh->frameID) == keyframesByKFID.end())
 				{
@@ -2478,12 +2543,12 @@ namespace dso
 					keyframesByKFID[fh->frameID] = kfd;
 					keyframes.push_back(kfd);
 				}
-				keyframesByKFID[fh->frameID]->setFromKF(fh, HCalib);
+				keyframesByKFID[fh->frameID]->setFromKF(fh, Hcalib);
 				keyframesByKFID[fh->frameID]->timestamp = fh->shell->timestamp;
 			}
 		}
 		void PangolinDSOViewer::publishCamPose(FrameShell *frame,
-											   CalibHessian *HCalib)
+											   CalibHessian *Hcalib)
 		{
 			if (!setting_render_display3D)
 				return;
@@ -2501,11 +2566,11 @@ namespace dso
 			if (!setting_render_display3D)
 				return;
 
-			currentCam->setFromF(frame, HCalib);
+			currentCam->setFromF(frame, Hcalib);
 			allFramePoses.push_back(frame->camToWorld.translation().cast<float>());
 		}
 
-		void PangolinDSOViewer::pushLiveFrame(FrameHessian *image)
+		void PangolinDSOViewer::pushLiveFrame(std::shared_ptr<FrameHessian>image)
 		{
 			if (!setting_render_displayVideo)
 				return;

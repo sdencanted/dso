@@ -81,7 +81,7 @@ public:
 
 	// ==================== Output3DWrapper Functionality ======================
     virtual void publishGraph(const std::map<uint64_t, Eigen::Vector2i, std::less<uint64_t>, Eigen::aligned_allocator<std::pair<const uint64_t, Eigen::Vector2i>>> &connectivity) override;
-    virtual void publishKeyframes( std::vector<FrameHessian*> &frames, bool final, CalibHessian* HCalib) override;
+virtual void publishKeyframes( std::vector<FrameHessian*> &frames, bool final, CalibHessian* HCalib) override;
     virtual void publishCamPose(FrameShell* frame, CalibHessian* HCalib) override;
 
 	// like the original pushLiveFrame but has color
@@ -100,6 +100,7 @@ private:
 	enum PlaybackMode { PAUSE, FORWARD, REVERSE };
 	enum CompassMode { ANGLE, POSITION,NOTHING };
 	enum Direction { UP, LEFT,DOWN,RIGHT };
+	enum CloseLoop { CL_OFF,CL_SELECT_FIRST,CL_SELECT_SECOND,CL_CONFIRM };
 	bool needReset;
 	void reset_internal();
 	void drawConstraints();
